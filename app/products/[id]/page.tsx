@@ -1,5 +1,6 @@
 import { Metadata } from "next";
 import ProductDetailPage from "@/components/ProductDetailClient";
+import { getProductImagePlaceholderUrl } from "@/lib/product-image-placeholder";
 
 const BASE_URL = "https://buysupply.me";
 
@@ -31,6 +32,7 @@ export async function generateMetadata(
   }
 
   const primaryImg = product.images?.find((i: any) => i.isPrimary) ?? product.images?.[0];
+  const fallbackImage = getProductImagePlaceholderUrl();
   const price = product.price != null ? `£${Number(product.price).toFixed(2)}` : "POA";
   const shortDesc = product.description
     ? product.description.slice(0, 160).replace(/\n/g, " ").trim()
@@ -51,13 +53,13 @@ export async function generateMetadata(
       type: "website",
       images: primaryImg
         ? [{ url: primaryImg.url, width: 800, height: 600, alt: product.name }]
-        : [{ url: `${BASE_URL}/logo.png`, width: 1200, height: 630, alt: "BuySupply" }],
+        : [{ url: fallbackImage, width: 1200, height: 630, alt: "BuySupply" }],
     },
     twitter: {
       card: "summary_large_image",
       title: `${product.name} | BuySupply`,
       description: shortDesc,
-      images: primaryImg ? [primaryImg.url] : [`${BASE_URL}/logo.png`],
+      images: primaryImg ? [primaryImg.url] : [fallbackImage],
     },
   };
 }
@@ -71,7 +73,9 @@ function ProductSchema({ product }: { product: any }) {
     "@type": "Product",
     name: product.name,
     description: product.description ?? product.name,
-    image: product.images?.map((i: any) => i.url) ?? [],
+    image: product.images?.length
+      ? product.images.map((i: any) => i.url)
+      : [getProductImagePlaceholderUrl()],
     sku: String(product.id),
     brand: {
       "@type": "Brand",

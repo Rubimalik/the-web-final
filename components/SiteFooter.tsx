@@ -7,6 +7,7 @@ const links = [
   { label: "UK Sales", href: "/uk-sales" },
   { label: "Export Sales", href: "/export-sales" },
   { label: "Leasing", href: "/leasing" },
+  { label: "Photocopier Rental", href: "/photocopier-rental" },
   { label: "Collection & Storage", href: "/collection-storage" },
   { label: "Sell To Us", href: "/sell-to-us" },
 ];
@@ -43,8 +44,18 @@ export default function SiteFooter() {
 
         <div>
           <h3 className="font-semibold mb-3">Contact Us</h3>
-          <p className="text-white/70 text-sm">Sales@buysupply.me</p>
-          <p className="text-white/70 text-sm mt-0.5">01753971125</p>
+          <a
+            href="mailto:sales@buysupply.me"
+            className="block text-white/70 text-sm hover:text-white transition"
+          >
+            Sales@buysupply.me
+          </a>
+          <a
+            href="tel:01753971125"
+            className="mt-0.5 block text-white/70 text-sm hover:text-white transition"
+          >
+            01753971125
+          </a>
         </div>
       </div>
       <div className="mt-8 text-center text-xs text-white/50">

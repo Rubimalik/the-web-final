@@ -1,57 +1,98 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getSession } from "@/lib/session";
-import fs from "fs";
-import path from "path";
+import { requireAdminSession } from "@/lib/session";
+import { createSupabaseAnonClient, createSupabaseServiceRoleClient } from "@/lib/supabase";
+import { normalizeEmailAddress } from "@/lib/supabase-auth";
 
 export async function GET() {
-  const session = await getSession();
-  if (!session.isLoggedIn) {
+  const session = await requireAdminSession();
+  if (!session) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  return NextResponse.json({ email: process.env.ADMIN_EMAIL ?? "" });
+  return NextResponse.json({ email: session.email });
 }
 
 export async function PUT(req: NextRequest) {
-  const session = await getSession();
-  if (!session.isLoggedIn) {
+  const session = await requireAdminSession();
+  if (!session) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
   const { currentPassword, newEmail, newPassword } = await req.json();
+  const normalizedCurrentPassword =
+    typeof currentPassword === "string" ? currentPassword : "";
+  const normalizedNewEmail =
+    typeof newEmail === "string" && newEmail.trim()
+      ? normalizeEmailAddress(newEmail)
+      : "";
+  const normalizedNewPassword =
+    typeof newPassword === "string" ? newPassword : "";
 
-  // Verify current password
-  if (currentPassword !== process.env.ADMIN_PASSWORD) {
+  if (!normalizedCurrentPassword) {
+    return NextResponse.json(
+      { error: "Current password is required" },
+      { status: 400 }
+    );
+  }
+
+  if (!normalizedNewEmail && !normalizedNewPassword) {
+    return NextResponse.json({ success: true });
+  }
+
+  if (normalizedNewPassword && normalizedNewPassword.length < 6) {
+    return NextResponse.json(
+      { error: "New password must be at least 6 characters" },
+      { status: 400 }
+    );
+  }
+
+  const supabase = createSupabaseAnonClient();
+  const { error: authError } = await supabase.auth.signInWithPassword({
+    email: session.email,
+    password: normalizedCurrentPassword,
+  });
+
+  if (authError) {
     return NextResponse.json(
       { error: "Current password is incorrect" },
       { status: 403 }
     );
   }
 
-  const envPath = path.resolve(process.cwd(), ".env");
-  let envContent = fs.readFileSync(envPath, "utf-8");
+  const updatePayload: {
+    email?: string;
+    email_confirm?: boolean;
+    password?: string;
+  } = {};
 
-  if (newEmail) {
-    envContent = envContent.replace(
-      /^ADMIN_EMAIL=.*/m,
-      `ADMIN_EMAIL=${newEmail}`
-    );
-    process.env.ADMIN_EMAIL = newEmail;
-
-    // Update session email
-    session.email = newEmail;
-    await session.save();
+  if (normalizedNewEmail && normalizedNewEmail !== session.email) {
+    updatePayload.email = normalizedNewEmail;
+    updatePayload.email_confirm = true;
   }
 
-  if (newPassword) {
-    envContent = envContent.replace(
-      /^ADMIN_PASSWORD=.*/m,
-      `ADMIN_PASSWORD=${newPassword}`
-    );
-    process.env.ADMIN_PASSWORD = newPassword;
+  if (normalizedNewPassword) {
+    updatePayload.password = normalizedNewPassword;
   }
 
-  fs.writeFileSync(envPath, envContent, "utf-8");
+  if (Object.keys(updatePayload).length === 0) {
+    return NextResponse.json({ success: true });
+  }
+
+  const adminSupabase = createSupabaseServiceRoleClient();
+  const { data, error } = await adminSupabase.auth.admin.updateUserById(
+    session.userId,
+    updatePayload
+  );
+
+  if (error || !data.user) {
+    return NextResponse.json(
+      { error: error?.message ?? "Failed to update account settings" },
+      { status: 500 }
+    );
+  }
+
+  session.email = data.user.email ?? session.email;
+  await session.save();
 
   return NextResponse.json({ success: true });
 }

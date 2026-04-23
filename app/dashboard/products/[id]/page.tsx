@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import {
     ChevronLeft, Loader2, Save, CheckCircle2, AlertCircle,
-    ImageOff, Tag, Calendar, Package, Layers, DollarSign,
+    ImageOff, Tag, Package, Layers, DollarSign,
     Trash2, ExternalLink, ChevronLeft as Prev, ChevronRight as Next, Link2, GripVertical,
 } from "lucide-react";
 import { HeicImage } from "@/components/HeicImage";
@@ -42,6 +42,9 @@ export default function ProductEditPage() {
     const [editedImages, setEditedImages] = useState<ProductImage[]>([]);
     const [draggedImgId, setDraggedImgId] = useState<number | null>(null);
     const [dragOverImgId, setDragOverImgId] = useState<number | null>(null);
+    const categoryListHref = product?.category?.slug
+        ? `/dashboard/products/all-products?category=${product.category.slug}`
+        : "/dashboard/products/all-products";
 
     // Editable fields
     const [name, setName] = useState("");
@@ -73,11 +76,25 @@ export default function ProductEditPage() {
             .finally(() => setLoading(false));
     }, [id]);
 
-    const handleDeleteExistingImage = (imageId: number) => {
-        setEditedImages((prev) => prev.filter((img) => img.id !== imageId));
-        if (activeImg >= editedImages.length - 1 && activeImg > 0) {
-            setActiveImg(activeImg - 1);
+    useEffect(() => {
+        if (editedImages.length === 0 && activeImg !== 0) {
+            setActiveImg(0);
+            return;
         }
+        if (editedImages.length > 0 && activeImg > editedImages.length - 1) {
+            setActiveImg(editedImages.length - 1);
+        }
+    }, [activeImg, editedImages.length]);
+
+    const handleDeleteExistingImage = (imageId: number) => {
+        setEditedImages((prev) => {
+            const nextImages = prev.filter((img) => img.id !== imageId);
+            setActiveImg((current) => {
+                if (nextImages.length === 0) return 0;
+                return Math.min(current, nextImages.length - 1);
+            });
+            return nextImages;
+        });
     };
 
     const handleReorderDragStart = (e: React.DragEvent, id: number) => {
@@ -123,6 +140,7 @@ export default function ProductEditPage() {
         setSaving(true);
         setSaveState("idle");
         try {
+            const hasPrimaryInNewImages = newImages.some((img) => img.isPrimary);
             const res = await fetch(`/api/product/${id}`, {
                 method: "PUT",
                 headers: { "Content-Type": "application/json" },
@@ -134,8 +152,17 @@ export default function ProductEditPage() {
                     status,
                     tags: tags || null,
                     categoryId: categoryId ? parseInt(categoryId) : null,
-                    editedImages: editedImages.map((img) => ({ id: img.id })),
-                    newImages: newImages.length > 0 ? newImages.map((img) => ({ url: img.url, key: img.key })) : undefined,
+                    editedImages: editedImages.map((img) => ({
+                        id: img.id,
+                        isPrimary: !hasPrimaryInNewImages && editedImages[0]?.id === img.id,
+                    })),
+                    newImages: newImages.length > 0
+                        ? newImages.map((img) => ({
+                            url: img.url,
+                            key: img.key,
+                            isPrimary: img.isPrimary,
+                        }))
+                        : undefined,
                 }),
             });
             if (!res.ok) throw new Error("Failed to save");
@@ -156,8 +183,11 @@ export default function ProductEditPage() {
         if (!confirm(`Delete "${product?.name}"? This cannot be undone.`)) return;
         setDeleting(true);
         try {
-            await fetch(`/api/product/${id}`, { method: "DELETE" });
-            router.push("/dashboard/products");
+            const res = await fetch(`/api/product/${id}`, { method: "DELETE" });
+            if (!res.ok) {
+                throw new Error("Failed to delete");
+            }
+            router.push(categoryListHref);
         } catch {
             alert("Failed to delete");
             setDeleting(false);
@@ -202,7 +232,7 @@ export default function ProductEditPage() {
             {/* ── Header ── */}
             <div className="flex items-center justify-between gap-4 flex-wrap">
                 <div className="flex items-center gap-3">
-                    <Link href="/dashboard/products/all-products"
+                    <Link href={categoryListHref}
                         className="w-8 h-8 rounded-lg border border-zinc-700 flex items-center justify-center text-zinc-400 hover:text-white hover:border-zinc-500 transition-all">
                         <ChevronLeft className="w-4 h-4" />
                     </Link>

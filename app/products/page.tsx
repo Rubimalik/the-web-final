@@ -3,8 +3,9 @@
 import { useEffect, useState, useCallback, Suspense } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Search, ImageOff, PhoneCall, Mail } from "lucide-react";
-import { HeicImage } from "@/components/HeicImage";
+import { Search } from "lucide-react";
+import NavBar from "@/components/Navbar";
+import { getProductImagePlaceholderUrl } from "@/lib/product-image-placeholder";
 
 interface ProductImage { id: number; url: string; isPrimary: boolean; }
 interface Category { id: number; name: string; slug: string; }
@@ -34,6 +35,7 @@ function SkeletonCard() {
 
 function ProductCard({ product }: { product: Product }) {
   const primaryImg = product.images?.find((i) => i.isPrimary) ?? product.images?.[0];
+  const imageUrl = primaryImg?.url ?? getProductImagePlaceholderUrl();
 
   return (
     <Link
@@ -41,19 +43,14 @@ function ProductCard({ product }: { product: Product }) {
       className="group rounded-xl overflow-hidden bg-zinc-900 border border-zinc-800 hover:border-zinc-600 transition-all duration-200 flex flex-col"
     >
       <div className="relative aspect-[4/3] overflow-hidden rounded-t-xl bg-zinc-800">
-        {primaryImg ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={primaryImg.url + "?w=800&f=jpeg"}
-            alt={product.name}
-            className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-300"
-            loading="lazy"
-          />
-        ) : (
-          <div className="w-full h-full flex items-center justify-center">
-            <ImageOff className="w-8 h-8 text-zinc-700" />
-          </div>
-        )}
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src={imageUrl}
+          alt={product.name}
+          className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-300"
+          loading="lazy"
+          decoding="async"
+        />
       </div>
       <div className="p-3 flex flex-col gap-1">
         <p className="text-sm text-white font-medium line-clamp-2 leading-snug">{product.name}</p>
@@ -83,7 +80,6 @@ function ProductsInner() {
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
-  const [total, setTotal] = useState(0);
 
   // Sync if URL changes externally
   useEffect(() => {
@@ -110,7 +106,6 @@ function ProductsInner() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed to load");
       setProducts(data.data || []);
-      setTotal(data.pagination?.total || 0);
       setTotalPages(data.pagination?.totalPages || 1);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to fetch");
@@ -139,18 +134,7 @@ function ProductsInner() {
 
   return (
     <div className="min-h-screen bg-black text-white" style={{ fontFamily: "'DM Sans', sans-serif" }}>
-
-      {/* ── Top contact bar ── */}
-      <div className="border-b border-zinc-900">
-        <div className="max-w-6xl mx-auto px-4 h-12 flex items-center justify-between">
-          <a href="tel:01753971125" className="flex items-center gap-2 text-sm text-white hover:text-zinc-300 transition-colors">
-            <PhoneCall className="w-4 h-4" />01753971125
-          </a>
-          <a href="mailto:sales@buysupply.me" className="flex items-center gap-2 text-sm text-white hover:text-zinc-300 transition-colors">
-            <Mail className="w-4 h-4" />sales@buysupply.me
-          </a>
-        </div>
-      </div>
+      <NavBar />
 
       {/* ── Category tabs ── */}
       <div className="border-b border-zinc-900">

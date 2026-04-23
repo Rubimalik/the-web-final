@@ -2,15 +2,21 @@ import { MetadataRoute } from "next";
 
 const BASE_URL = "https://buysupply.me";
 
+type SitemapProduct = {
+  id: number;
+  createdAt: string;
+  updatedAt?: string | null;
+};
+
 async function getAllProducts() {
   try {
     const res = await fetch(`${BASE_URL}/api/product?status=active&limit=1000&page=1`, {
       next: { revalidate: 3600 }, // re-fetch every hour
     });
     const data = await res.json();
-    return data.data ?? [];
+    return (data.data ?? []) as SitemapProduct[];
   } catch {
-    return [];
+    return [] as SitemapProduct[];
   }
 }
 
@@ -43,10 +49,16 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       changeFrequency: "daily",
       priority: 0.8,
     },
+    {
+      url: `${BASE_URL}/photocopier-rental`,
+      lastModified: new Date(),
+      changeFrequency: "weekly",
+      priority: 0.7,
+    },
   ];
 
   // Dynamic product pages
-  const productPages: MetadataRoute.Sitemap = products.map((product: any) => ({
+  const productPages: MetadataRoute.Sitemap = products.map((product) => ({
     url: `${BASE_URL}/products/${product.id}`,
     lastModified: new Date(product.updatedAt ?? product.createdAt),
     changeFrequency: "weekly" as const,

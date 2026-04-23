@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/lib/db";
+import { requireAdminSession } from "@/lib/session";
+import { deleteProductImages } from "@/lib/supabase-storage";
+import { createProduct, listProducts } from "@/lib/catalog-store";
 import { z } from "zod";
 
 const createProductSchema = z.object({
@@ -20,38 +22,22 @@ const createProductSchema = z.object({
 export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
-    const page       = Math.max(1, parseInt(searchParams.get("page")  || "1"));
-    const limit      = Math.min(100, parseInt(searchParams.get("limit") || "12"));
-    const status     = searchParams.get("status") || "";
-    const search     = searchParams.get("search") || "";
-    const categoryId = searchParams.get("categoryId") || "";
-    const slug       = searchParams.get("slug") || "";
+    const page = Math.max(1, parseInt(searchParams.get("page") || "1"));
+    const limit = Math.min(100, parseInt(searchParams.get("limit") || "12"));
+    const status = searchParams.get("status") || undefined;
+    const search = searchParams.get("search") || undefined;
+    const categoryIdParam = searchParams.get("categoryId");
+    const slug = searchParams.get("slug") || undefined;
+    const categoryId = categoryIdParam ? parseInt(categoryIdParam) : undefined;
 
-    const where: Record<string, unknown> = {};
-    if (status) where.status = status;
-    if (categoryId) where.categoryId = parseInt(categoryId);
-    if (slug) where.category = { slug };
-    if (search) {
-      where.OR = [
-        { name:        { contains: search, mode: "insensitive" } },
-        { description: { contains: search, mode: "insensitive" } },
-        { tags:        { contains: search, mode: "insensitive" } },
-      ];
-    }
-
-    const [products, total] = await prisma.$transaction([
-      prisma.product.findMany({
-        where,
-        include: {
-          images:   { orderBy: { order: "asc" } },
-          category: { select: { id: true, name: true, slug: true } },
-        },
-        orderBy: { createdAt: "desc" },
-        skip: (page - 1) * limit,
-        take: limit,
-      }),
-      prisma.product.count({ where }),
-    ]);
+    const { data: products, total } = await listProducts({
+      page,
+      limit,
+      status,
+      search,
+      categoryId: Number.isNaN(categoryId) ? undefined : categoryId,
+      slug,
+    });
 
     return NextResponse.json({
       data: products,
@@ -64,6 +50,12 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
+  if (!(await requireAdminSession())) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  let uploadedKeysToCleanup: string[] = [];
+
   try {
     const body   = await req.json();
     const parsed = createProductSchema.safeParse(body);
@@ -72,31 +64,29 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Validation failed", details: parsed.error.flatten() }, { status: 400 });
 
     const { name, description, url, price, status, tags, categoryId, images } = parsed.data;
+    uploadedKeysToCleanup = images.map((image) => image.key);
 
-    const product = await prisma.product.create({
-      data: {
-        name,
-        description: description || null,
-        url:         url || null,
-        price:       price ?? null,
-        status,
-        tags:        tags || null,
-        categoryId:  categoryId ?? null,
-        images: {
-          create: images.map((img, i) => ({
-            url: img.url, key: img.key, isPrimary: img.isPrimary ?? i === 0, order: i,
-          })),
-        },
-      },
-      include: {
-        images:   { orderBy: { order: "asc" } },
-        category: { select: { id: true, name: true, slug: true } },
-      },
+    const product = await createProduct({
+      name,
+      description: description || null,
+      url: url || null,
+      price: price ?? null,
+      status,
+      tags: tags || null,
+      categoryId: categoryId ?? null,
+      images,
     });
 
     return NextResponse.json({ data: product, message: "Product created successfully" }, { status: 201 });
   } catch (err) {
     console.error("[POST /api/product]", err);
+
+    try {
+      await deleteProductImages(uploadedKeysToCleanup);
+    } catch (cleanupErr) {
+      console.error("[POST /api/product cleanup]", cleanupErr);
+    }
+
     return NextResponse.json({ error: "Failed to create product" }, { status: 500 });
   }
 }

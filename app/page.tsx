@@ -1,21 +1,9 @@
-"use client"
-
 import NavBar from "@/components/Navbar";
 import SiteFooter from "@/components/SiteFooter";
 import Image from "next/image";
 import Link from "next/link";
-import { useEffect, useState } from "react";
 
 export default function Home() {
-  const [isMobile, setIsMobile] = useState(false);
-
-  useEffect(() => {
-    const handler = () => setIsMobile(window.innerWidth < 640);
-    handler();
-    window.addEventListener("resize", handler);
-    return () => window.removeEventListener("resize", handler);
-  }, []);
-
   return (
     <div className="bg-black text-white min-h-screen font-myriad">
       <NavBar />
@@ -26,6 +14,8 @@ export default function Home() {
           width={140}
           height={150}
           alt="BUYSUPPLY Logo"
+          priority
+          sizes="(max-width: 640px) 140px, (max-width: 768px) 150px, 170px"
           className="w-[140px] sm:w-[150px] md:w-[170px] h-auto mb-6 sm:mb-8"
         />
 
@@ -46,15 +36,7 @@ export default function Home() {
           <h2 className="text-white font-semibold text-[15px] sm:text-[28px] md:text-[36px] mb-6 sm:mb-8 font-myriad">
             PRESS HERE FOR STOCK
           </h2>
-          <div
-            suppressHydrationWarning
-            style={{
-              display: "flex",
-              flexDirection: isMobile ? "column" : "row",
-              gap: isMobile ? "32px" : "64px",
-              alignItems: "center",
-              justifyContent: "center"
-            }}>
+          <div className="flex flex-col sm:flex-row gap-8 sm:gap-16 items-center justify-center">
             <div className="flex flex-col items-center gap-2">
               <span className="text-white/80 text-[10px] sm:text-[14px] md:text-[16px] font-medium tracking-wider uppercase text-center">
                 Printers & Photocopiers
@@ -65,7 +47,14 @@ export default function Home() {
                  rounded-full transition-all duration-300
                  hover:scale-105 active:scale-95 shadow-lg overflow-hidden"
               >
-                <img src="/button.png" alt="Printers & Copier" className="w-full h-full object-cover" />
+                <Image
+                  src="/button.png"
+                  alt="Printers & Copier"
+                  width={85}
+                  height={85}
+                  sizes="(max-width: 640px) 62px, (max-width: 768px) 75px, 85px"
+                  className="w-full h-full object-cover"
+                />
               </Link>
               <span className="text-white/70 text-[8px] sm:text-[13px] md:text-[14px]">Start</span>
             </div>
@@ -80,7 +69,14 @@ export default function Home() {
                  rounded-full transition-all duration-300
                  hover:scale-105 active:scale-95 shadow-lg overflow-hidden"
               >
-                <img src="/button.png" alt="Consumables" className="w-full h-full object-cover" />
+                <Image
+                  src="/button.png"
+                  alt="Consumables"
+                  width={85}
+                  height={85}
+                  sizes="(max-width: 640px) 62px, (max-width: 768px) 75px, 85px"
+                  className="w-full h-full object-cover"
+                />
               </Link>
               <span className="text-white/70 text-[8px] sm:text-[13px] md:text-[14px]">Start</span>
             </div>

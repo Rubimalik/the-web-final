@@ -5,7 +5,7 @@ BuySupply is a UK-based e-commerce platform specializing in photocopiers, printe
 ## Features
 
 - **Product Management**: Full CRUD operations for products with image uploads
-- **Natural Image Sorting**: Images are sorted by filename in natural numerical order (IMG_1, IMG_2, IMG_3, IMG_10, IMG_11)
+- **Primary Image + Drag-and-Drop Ordering**: Admin users can reorder images and choose the primary product image
 - **Responsive Design**: Optimized for desktop, tablet, and mobile devices
 - **Admin Dashboard**: Complete product management interface
 - **Product Categories**: Organized product catalog with category support
@@ -18,11 +18,11 @@ BuySupply is a UK-based e-commerce platform specializing in photocopiers, printe
 - **Framework**: Next.js 16.1.6 with React 19.2.3
 - **Language**: TypeScript
 - **Styling**: Tailwind CSS
-- **Database**: PostgreSQL with Prisma ORM
-- **Authentication**: Iron-session for session management
-- **File Upload**: Uploadthing for image handling
+- **Database**: Supabase Postgres via direct `pg` access
+- **Authentication**: Supabase Auth with iron-session admin sessions
+- **File Upload**: Supabase Storage for product images
 - **Fonts**: Custom Myriad Pro and Roboto fonts
-- **Deployment**: Ready for Vercel, Netlify, or other platforms
+- **Deployment**: Netlify via manual CLI flow with a documented runtime shim
 
 ## Getting Started
 
@@ -36,7 +36,7 @@ BuySupply is a UK-based e-commerce platform specializing in photocopiers, printe
 
 1. Clone the repository:
 ```bash
-git clone https://github.com/Rubimalik/buysupply.git
+git clone <your-github-repository-url>
 cd buysupply
 ```
 
@@ -48,25 +48,20 @@ npm install
 3. Set up environment variables:
 ```bash
 cp .env.example .env.local
-# Configure your database URL and other environment variables
+# Or use the separate local handoff env file if it was shared outside Git
 ```
 
-4. Run database migrations:
+4. Seed the database (optional):
 ```bash
-npx prisma migrate dev
+npm run seed
 ```
 
-5. Seed the database (optional):
-```bash
-npx prisma db seed
-```
-
-6. Start the development server:
+5. Start the development server:
 ```bash
 npm run dev
 ```
 
-7. Open [http://localhost:3000](http://localhost:3000) in your browser.
+6. Open [http://localhost:3000](http://localhost:3000) in your browser.
 
 ## Project Structure
 
@@ -79,20 +74,19 @@ my-app/
   components/             # Reusable React components
     dashboard/            # Admin components
   lib/                    # Utility libraries
-  prisma/                 # Database schema and migrations
+  scripts/                # Deploy, seed, and migration utilities
   public/                 # Static assets
 ```
 
 ## Key Features
 
-### Natural Image Sorting
+### Product Image Management
 
-The application includes a custom natural sorting algorithm that ensures images are displayed in the correct numerical sequence:
+Product images are driven by the admin ordering and primary-image selection:
 
-- **Before**: `IMG_1.jpg, IMG_10.jpg, IMG_2.jpg, IMG_3.jpg` (lexicographic)
-- **After**: `IMG_1.jpg, IMG_2.jpg, IMG_3.jpg, IMG_10.jpg` (natural numerical)
-
-This sorting is applied in both the admin panel and public product pages.
+- Drag-and-drop order is preserved on save
+- The primary image is used as the product cover
+- Public product pages and admin lists use the stored primary/order state
 
 ### Admin Dashboard
 
@@ -115,22 +109,41 @@ The application is fully responsive and works seamlessly across:
 - `npm run build` - Build for production
 - `npm run start` - Start production server
 - `npm run lint` - Run ESLint
+- `npm run netlify:manual:build` - Run `netlify build` and patch the generated server handler
+- `npm run netlify:manual:deploy` - Upload the prepared Netlify build artifacts
+- `npm run netlify:manual:release` - Build, deploy, and smoke-check production in one command
+- `npm run netlify:smoke` - Verify the current production routes and auth guard responses
+- `npm run seed` - Seed the default product categories
 
 ## Deployment
 
-The application is ready for deployment on any platform that supports Next.js:
+The current production path is Netlify, not Vercel.
 
-### Vercel (Recommended)
+Use these files as the source of truth before deploying:
 
-1. Connect your GitHub repository to Vercel
-2. Configure environment variables
-3. Deploy automatically on push
+- [NETLIFY_SETUP.md](./NETLIFY_SETUP.md)
+- [NETLIFY_HANDOFF.md](./NETLIFY_HANDOFF.md)
+- [PROJECT_TRANSFER.md](./PROJECT_TRANSFER.md)
 
-### Other Platforms
+### Netlify Manual Release
 
-1. Build the application: `npm run build`
-2. Upload the `.next` folder and `public` folder
-3. Configure environment variables
+1. Export `NETLIFY_AUTH_TOKEN` in your shell.
+2. Run `npm run netlify:manual:release`.
+3. If you need the steps separately, use:
+   `npm run netlify:manual:build`
+   `npm run netlify:manual:deploy`
+   `npm run netlify:smoke`
+
+### Important Caveat
+
+This repository uses a documented Netlify runtime workaround for Next.js 16. The post-build shim makes SSR and route handlers work on the current site, but ISR/data-cache behavior should still be treated as non-ideal until the app is moved to a cleaner hosting flow or the native runtime path is fixed.
+
+### Current Backend Notes
+
+- Product images are stored in `Supabase Storage`, bucket `product-images`
+- Admin login is backed by `Supabase Auth`
+- The app data layer runs directly against Supabase Postgres
+- `UploadThing` is no longer part of the active runtime path
 
 ## Contributing
 
@@ -153,6 +166,3 @@ This project is proprietary and owned by BuySupply UK.
 ---
 
 Built with Next.js, React, and Tailwind CSS
-"# the-web-final" 
-"# the-web-final" 
-"# the-web-final" 

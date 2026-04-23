@@ -1,12 +1,13 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, type BaseSyntheticEvent } from "react";
 import { useForm, Controller } from "react-hook-form";
 import { useRouter } from "next/navigation";
 import { ImageUpload, type UploadedImage } from "./ImageUpload";
+import { type AdminProductCategorySlug } from "@/lib/admin-product-categories";
 import {
   Package, DollarSign, Layers, Info, AlertCircle,
-  ChevronDown, Loader2, CheckCircle2, Tag, Link2,
+  ChevronDown, CheckCircle2, Tag, Link2,
 } from "lucide-react";
 
 type ProductFormData = {
@@ -98,13 +99,25 @@ function Card({ title, icon: Icon, children, className = "" }: {
   );
 }
 
-export function ProductUploadForm() {
+export function ProductUploadForm({
+  initialCategorySlug,
+}: {
+  initialCategorySlug?: AdminProductCategorySlug;
+}) {
   const router = useRouter();
   const [submitState, setSubmitState] = useState<"idle" | "loading" | "success" | "error">("idle");
   const [submitError, setSubmitError] = useState("");
   const [categories, setCategories] = useState<Category[]>([]);
 
-  const { register, handleSubmit, control, watch, formState: { errors } } = useForm<ProductFormData>({
+  const {
+    register,
+    handleSubmit,
+    control,
+    watch,
+    setValue,
+    getValues,
+    formState: { errors },
+  } = useForm<ProductFormData>({
     defaultValues: { status: "draft", images: [], categoryId: "" },
   });
 
@@ -115,14 +128,36 @@ export function ProductUploadForm() {
       .catch(() => { });
   }, []);
 
+  useEffect(() => {
+    if (!initialCategorySlug || categories.length === 0 || getValues("categoryId")) {
+      return;
+    }
+
+    const matchedCategory = categories.find((category) => category.slug === initialCategorySlug);
+    if (!matchedCategory) {
+      return;
+    }
+
+    setValue("categoryId", String(matchedCategory.id), { shouldDirty: false, shouldValidate: true });
+  }, [categories, getValues, initialCategorySlug, setValue]);
+
   const descriptionValue = watch("description") || "";
   const watchedImages = watch("images") || [];
 
-  const onSubmit = async (data: ProductFormData) => {
+  const onSubmit = async (
+    data: ProductFormData,
+    event?: BaseSyntheticEvent,
+  ) => {
     if (data.images.length === 0) {
       setSubmitError("Please upload at least one product image.");
       return;
     }
+
+    const submitter = (event?.nativeEvent as SubmitEvent | undefined)?.submitter as
+      | HTMLButtonElement
+      | undefined;
+    const submitIntent = submitter?.dataset.submitIntent === "draft" ? "draft" : data.status;
+
     setSubmitState("loading");
     setSubmitError("");
     try {
@@ -131,7 +166,7 @@ export function ProductUploadForm() {
         description: data.description || undefined,
         url: data.url || undefined,
         price: data.price ? parseFloat(data.price) : null,
-        status: data.status,
+        status: submitIntent,
         tags: data.tags || undefined,
         categoryId: data.categoryId ? parseInt(data.categoryId) : null,
         images: data.images.map((img) => ({ url: img.url, key: img.key, isPrimary: img.isPrimary })),
@@ -149,14 +184,19 @@ export function ProductUploadForm() {
       }
 
       setSubmitState("success");
-      setTimeout(() => router.push("/dashboard/products/all-products"), 1500);
+      const selectedCategory = categories.find(
+        (category) => category.id === Number.parseInt(data.categoryId, 10),
+      );
+      const redirectUrl = selectedCategory
+        ? `/dashboard/products/all-products?category=${selectedCategory.slug}`
+        : "/dashboard/products/all-products";
+      setTimeout(() => router.push(redirectUrl), 1500);
     } catch (err) {
       setSubmitState("error");
       setSubmitError(err instanceof Error ? err.message : "Something went wrong");
     }
   };
 
-  const isLoading = submitState === "loading";
   const isSuccess = submitState === "success";
 
   const checklist = [
@@ -294,18 +334,6 @@ export function ProductUploadForm() {
               <CheckCircle2 className="w-4 h-4 shrink-0" />Product created! Redirecting...
             </div>
           )}
-
-          <div className="flex flex-col gap-2">
-            <button type="submit" disabled={isLoading || isSuccess}
-              className="w-full py-2.5 text-sm font-semibold bg-indigo-600 hover:bg-indigo-500 disabled:opacity-60 disabled:cursor-not-allowed text-white rounded-xl transition-all flex items-center justify-center gap-2 shadow-lg shadow-indigo-900/30">
-              {isLoading ? <><Loader2 className="w-4 h-4 animate-spin" />Saving...</> : isSuccess ? <><CheckCircle2 className="w-4 h-4" />Saved!</> : "Publish Product"}
-            </button>
-            <button type="button" disabled={isLoading || isSuccess}
-              onClick={() => handleSubmit((data) => onSubmit({ ...data, status: "draft" }))()}
-              className="w-full py-2.5 text-sm font-medium border border-zinc-700 hover:border-zinc-600 disabled:opacity-60 text-zinc-400 hover:text-white rounded-xl transition-all">
-              Save as Draft
-            </button>
-          </div>
         </div>
       </div>
     </form>

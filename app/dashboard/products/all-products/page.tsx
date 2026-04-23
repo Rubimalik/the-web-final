@@ -1,14 +1,16 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { Suspense, useEffect, useState, useCallback } from "react";
 import Link from "next/link";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import {
   Plus, Search, Filter, Trash2, Eye,
   ChevronLeft, ChevronRight, Loader2, AlertCircle,
-  Package, Tag, ImageOff, RefreshCw,
+  Package, Tag, RefreshCw,
 } from "lucide-react";
+import { getAdminProductCategoryBySlug } from "@/lib/admin-product-categories";
+import { getProductImagePlaceholderUrl } from "@/lib/product-image-placeholder";
 
-// Matches your Prisma schema exactly
 interface ProductImage {
   id: number;
   url: string;
@@ -40,28 +42,78 @@ const STATUS_CONFIG = {
   archived: { label: "Archived", classes: "bg-amber-500/15 text-amber-400 border-amber-500/25", dot: "bg-amber-400" },
 };
 
-export default function AllProductsPage() {
+function buildRoute(pathname: string, params: URLSearchParams) {
+  const query = params.toString();
+  return query ? `${pathname}?${query}` : pathname;
+}
+
+function AllProductsPageContent() {
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const searchParamsString = searchParams.toString();
   const [products, setProducts] = useState<Product[]>([]);
   const [pagination, setPagination] = useState<Pagination | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [search, setSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState("");
-  const [page, setPage] = useState(1);
+  const activeCategory = getAdminProductCategoryBySlug(searchParams.get("category"));
+  const querySearch = searchParams.get("search") ?? "";
+  const queryStatus = searchParams.get("status") ?? "";
+  const queryPage = Math.max(1, Number.parseInt(searchParams.get("page") || "1", 10) || 1);
+  const [searchInput, setSearchInput] = useState(querySearch);
+  const [debouncedSearch, setDebouncedSearch] = useState(querySearch);
+  const [statusFilter, setStatusFilter] = useState(queryStatus);
+  const [page, setPage] = useState(queryPage);
   const [deletingId, setDeletingId] = useState<number | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState<Product | null>(null);
+
+  const updateQueryParams = useCallback((updates: {
+    search?: string;
+    status?: string;
+    page?: number;
+  }) => {
+    const params = new URLSearchParams(searchParamsString);
+
+    if ("search" in updates) {
+      const nextSearch = updates.search?.trim() ?? "";
+      if (nextSearch) {
+        params.set("search", nextSearch);
+      } else {
+        params.delete("search");
+      }
+    }
+
+    if ("status" in updates) {
+      const nextStatus = updates.status?.trim() ?? "";
+      if (nextStatus) {
+        params.set("status", nextStatus);
+      } else {
+        params.delete("status");
+      }
+    }
+
+    if ("page" in updates) {
+      if ((updates.page ?? 1) > 1) {
+        params.set("page", String(updates.page));
+      } else {
+        params.delete("page");
+      }
+    }
+
+    router.replace(buildRoute(pathname, params), { scroll: false });
+  }, [pathname, router, searchParamsString]);
 
   const fetchProducts = useCallback(async () => {
     setLoading(true);
     setError("");
     try {
       const params = new URLSearchParams({ page: String(page), limit: "12" });
-      if (search) params.set("search", search);
+      if (debouncedSearch) params.set("search", debouncedSearch);
       if (statusFilter) params.set("status", statusFilter);
+      if (activeCategory?.slug) params.set("slug", activeCategory.slug);
 
       const res = await fetch(`/api/product?${params}`);
       const data = await res.json();
-      console.log("Fetched products:", data);
       if (!res.ok) throw new Error(data.error || "Failed to load");
       setProducts(data.data);
       setPagination(data.pagination);
@@ -70,15 +122,37 @@ export default function AllProductsPage() {
     } finally {
       setLoading(false);
     }
-  }, [page, statusFilter, search]);
+  }, [activeCategory?.slug, debouncedSearch, page, statusFilter]);
 
   useEffect(() => { fetchProducts(); }, [fetchProducts]);
 
-  // Debounce search
   useEffect(() => {
-    const t = setTimeout(() => { setPage(1); fetchProducts(); }, 400);
+    setSearchInput(querySearch);
+    setDebouncedSearch(querySearch);
+  }, [querySearch]);
+
+  useEffect(() => {
+    setStatusFilter(queryStatus);
+  }, [queryStatus]);
+
+  useEffect(() => {
+    setPage(queryPage);
+  }, [queryPage]);
+
+  useEffect(() => {
+    const t = setTimeout(() => {
+      const nextSearch = searchInput.trim();
+      setDebouncedSearch(nextSearch);
+
+      if (nextSearch === querySearch) {
+        return;
+      }
+
+      setPage(1);
+      updateQueryParams({ search: nextSearch, page: 1 });
+    }, 400);
     return () => clearTimeout(t);
-  }, [search]);
+  }, [querySearch, searchInput, updateQueryParams]);
 
   const handleDelete = async (product: Product) => {
     setDeletingId(product.id);
@@ -94,9 +168,29 @@ export default function AllProductsPage() {
     }
   };
 
+  const handleStatusChange = (nextStatus: string) => {
+    setStatusFilter(nextStatus);
+    setPage(1);
+    updateQueryParams({ status: nextStatus, page: 1 });
+  };
+
+  const handlePageChange = (nextPage: number) => {
+    setPage(nextPage);
+    updateQueryParams({ page: nextPage });
+  };
+
   const totalActive = products.filter((p) => p.status === "active").length;
   const totalDraft = products.filter((p) => p.status === "draft").length;
   const totalArchived = products.filter((p) => p.status === "archived").length;
+  const addProductHref = activeCategory
+    ? `/dashboard/products/new?category=${activeCategory.slug}`
+    : "/dashboard/products/new";
+  const pageTitle = activeCategory ? activeCategory.label : "All Products";
+  const pageDescription = activeCategory
+    ? `${pagination ? pagination.total : 0} products in ${activeCategory.label.toLowerCase()}`
+    : pagination
+      ? `${pagination.total} products in your catalogue`
+      : "Manage your product catalogue";
 
   return (
     <div className="max-w-7xl mx-auto space-y-6 pb-10">
@@ -104,9 +198,9 @@ export default function AllProductsPage() {
       {/* ── Header ── */}
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-semibold text-white tracking-tight">All Products</h1>
+          <h1 className="text-2xl font-semibold text-white tracking-tight">{pageTitle}</h1>
           <p className="text-zinc-500 text-sm mt-1">
-            {pagination ? `${pagination.total} products in your catalogue` : "Manage your product catalogue"}
+            {pageDescription}
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -117,7 +211,7 @@ export default function AllProductsPage() {
             <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} />
           </button>
           <Link
-            href="/dashboard/products/new"
+            href={addProductHref}
             className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-medium rounded-lg transition-all shadow-lg shadow-indigo-900/30"
           >
             <Plus className="w-4 h-4" />
@@ -148,8 +242,8 @@ export default function AllProductsPage() {
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" />
           <input
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            value={searchInput}
+            onChange={(e) => setSearchInput(e.target.value)}
             placeholder="Search by name or tags..."
             className="w-full pl-9 pr-4 py-2.5 text-sm bg-zinc-900/60 border border-zinc-700/60 text-zinc-200 placeholder:text-zinc-600 rounded-lg focus:outline-none focus:border-indigo-500/60 transition-all"
           />
@@ -158,7 +252,7 @@ export default function AllProductsPage() {
           <Filter className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500 pointer-events-none" />
           <select
             value={statusFilter}
-            onChange={(e) => { setStatusFilter(e.target.value); setPage(1); }}
+            onChange={(e) => handleStatusChange(e.target.value)}
             className="pl-9 pr-8 py-2.5 text-sm appearance-none bg-zinc-900/60 border border-zinc-700/60 text-zinc-200 rounded-lg focus:outline-none focus:border-indigo-500/60 transition-all cursor-pointer"
           >
             <option value="">All Status</option>
@@ -201,12 +295,12 @@ export default function AllProductsPage() {
           <div>
             <p className="text-base font-medium text-zinc-300">No products found</p>
             <p className="text-sm text-zinc-600 mt-1">
-              {search || statusFilter ? "Try adjusting your filters" : "Start by adding your first product"}
+              {searchInput || statusFilter ? "Try adjusting your filters" : "Start by adding your first product"}
             </p>
           </div>
-          {!search && !statusFilter && (
+          {!searchInput && !statusFilter && (
             <Link
-              href="/dashboard/products/new"
+              href={addProductHref}
               className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-medium rounded-lg transition-all"
             >
               <Plus className="w-4 h-4" />Add your first product
@@ -220,6 +314,7 @@ export default function AllProductsPage() {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
           {products.map((product) => {
             const primaryImg = product.images?.find((i) => i.isPrimary) || product.images?.[0];
+            const imageUrl = primaryImg?.url ?? getProductImagePlaceholderUrl();
             const status = STATUS_CONFIG[product.status];
             const tags = product.tags?.split(",").map((t) => t.trim()).filter(Boolean) ?? [];
 
@@ -230,18 +325,12 @@ export default function AllProductsPage() {
               >
                 {/* Image */}
                 <div className="relative aspect-[4/3] bg-zinc-900 overflow-hidden">
-                  {primaryImg ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
-                      src={primaryImg.url}
-                      alt={product.name}
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                    />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center">
-                      <ImageOff className="w-8 h-8 text-zinc-700" />
-                    </div>
-                  )}
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={imageUrl}
+                    alt={product.name}
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                  />
 
                   {/* Status badge */}
                   <div className="absolute top-2.5 left-2.5">
@@ -329,7 +418,7 @@ export default function AllProductsPage() {
           </p>
           <div className="flex items-center gap-1.5">
             <button
-              onClick={() => setPage((p) => p - 1)}
+              onClick={() => handlePageChange(page - 1)}
               disabled={page === 1}
               className="w-8 h-8 rounded-lg border border-zinc-700 flex items-center justify-center text-zinc-400 hover:text-white hover:border-zinc-500 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
             >
@@ -340,7 +429,7 @@ export default function AllProductsPage() {
               return (
                 <button
                   key={p}
-                  onClick={() => setPage(p)}
+                  onClick={() => handlePageChange(p)}
                   className={`w-8 h-8 rounded-lg text-sm font-medium transition-all ${p === page
                     ? "bg-indigo-600 text-white shadow-lg shadow-indigo-900/30"
                     : "border border-zinc-700 text-zinc-400 hover:text-white hover:border-zinc-500"
@@ -351,7 +440,7 @@ export default function AllProductsPage() {
               );
             })}
             <button
-              onClick={() => setPage((p) => p + 1)}
+              onClick={() => handlePageChange(page + 1)}
               disabled={page === pagination.totalPages}
               className="w-8 h-8 rounded-lg border border-zinc-700 flex items-center justify-center text-zinc-400 hover:text-white hover:border-zinc-500 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
             >
@@ -390,5 +479,28 @@ export default function AllProductsPage() {
         </div>
       )}
     </div>
+  );
+}
+
+export default function AllProductsPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="max-w-7xl mx-auto space-y-6 pb-10">
+          <div className="h-24 rounded-2xl border border-zinc-800/70 bg-[#13131a] animate-pulse" />
+          <div className="h-14 rounded-2xl border border-zinc-800/70 bg-[#13131a] animate-pulse" />
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+            {Array.from({ length: 4 }).map((_, index) => (
+              <div
+                key={index}
+                className="aspect-[4/5] rounded-2xl border border-zinc-800/70 bg-[#13131a] animate-pulse"
+              />
+            ))}
+          </div>
+        </div>
+      }
+    >
+      <AllProductsPageContent />
+    </Suspense>
   );
 }

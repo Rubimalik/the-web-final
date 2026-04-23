@@ -1,0 +1,3 @@
+/_next/image /.netlify/images?url=:url&w=:width&q=:quality 200
+/_ipx/* /.netlify/images?url=:url&w=:width&q=:quality 200
+/* /.netlify/functions/___netlify-server-handler 200

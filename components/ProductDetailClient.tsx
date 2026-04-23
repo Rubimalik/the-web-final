@@ -2,8 +2,10 @@
 
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { ChevronLeft, ChevronRight, PhoneCall, Mail, ImageOff, Loader2, Tag, Calendar, ExternalLink } from "lucide-react";
+import { ChevronLeft, ChevronRight, PhoneCall, Mail, ImageOff, Loader2, Calendar, ExternalLink } from "lucide-react";
 import { HeicImage } from "@/components/HeicImage";
+import NavBar from "@/components/Navbar";
+import { getProductImagePlaceholderUrl } from "@/lib/product-image-placeholder";
 
 interface ProductImage { id: number; url: string; isPrimary: boolean; }
 interface Category { id: number; name: string; slug: string; }
@@ -13,6 +15,12 @@ interface Product {
   createdAt: string; images: ProductImage[];
   category: Category | null;
 }
+
+const PLACEHOLDER_IMAGE: ProductImage = {
+  id: 0,
+  url: getProductImagePlaceholderUrl(),
+  isPrimary: true,
+};
 
 function RichText({ text }: { text: string }) {
   const urlRegex = /(https?:\/\/[^\s]+)/g;
@@ -78,34 +86,21 @@ export default function ProductDetailPage() {
     </div>
   );
 
-  const tags = product.tags?.split(",").map((t) => t.trim()).filter(Boolean) ?? [];
-
-  // Images come pre-sorted from API by order field
-  const images = product.images.length > 0 ? product.images : [];
+  const images = product.images.length > 0 ? product.images : [PLACEHOLDER_IMAGE];
   const currentImg = images[activeImg];
 
   return (
     <div className="min-h-screen bg-[#0a0a0d] text-white" style={{ fontFamily: "'DM Sans', sans-serif" }}>
-
-      {/* Top bar */}
-      <div className="border-b border-white/[0.06] bg-[#0a0a0d]/90 backdrop-blur-md sticky top-0 z-10">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between">
-          <button onClick={() => router.back()}
-            className="flex items-center gap-1.5 text-sm text-white/40 hover:text-white transition-colors">
-            <ChevronLeft className="w-4 h-4" /> Back
-          </button>
-          <div className="flex items-center gap-5 text-xs text-white/40">
-            <a href="tel:01753971125" className="flex items-center gap-1.5 hover:text-white/70 transition-colors">
-              <PhoneCall className="w-3.5 h-3.5" /><span className="hidden sm:inline">01753971125</span>
-            </a>
-            <a href="mailto:sales@buysupply.me" className="flex items-center gap-1.5 hover:text-white/70 transition-colors">
-              <Mail className="w-3.5 h-3.5" /><span className="hidden sm:inline">sales@buysupply.me</span>
-            </a>
-          </div>
-        </div>
-      </div>
+      <NavBar />
 
       <div className="max-w-6xl mx-auto px-4 sm:px-6 py-8 lg:py-12">
+        <button
+          onClick={() => router.back()}
+          className="mb-6 flex items-center gap-1.5 text-sm text-white/40 hover:text-white transition-colors"
+        >
+          <ChevronLeft className="w-4 h-4" /> Back
+        </button>
+
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12">
 
           {/* ── Image gallery ── */}
@@ -116,7 +111,12 @@ export default function ProductDetailPage() {
               onClick={() => images.length > 0 && setLightbox(true)}
             >
               {currentImg ? (
-                <HeicImage src={currentImg.url} alt={product.name} className="w-full h-full object-contain" />
+                <HeicImage
+                  src={currentImg.url}
+                  alt={product.name}
+                  className="w-full h-full object-contain"
+                  loading="eager"
+                />
               ) : (
                 <div className="w-full h-full flex items-center justify-center">
                   <ImageOff className="w-12 h-12 text-white/10" />
@@ -140,7 +140,7 @@ export default function ProductDetailPage() {
                 </>
               )}
 
-              {images.length > 0 && (
+              {product.images.length > 0 && (
                 <div className="absolute top-3 right-3 bg-black/50 backdrop-blur-sm text-white/50 text-[10px] px-2 py-1 rounded-lg border border-white/10">
                   Click to expand
                 </div>
@@ -148,7 +148,7 @@ export default function ProductDetailPage() {
             </div>
 
             {/* Thumbnail strip */}
-            {images.length > 1 && (
+            {product.images.length > 1 && (
               <div className="flex gap-2 overflow-x-auto pb-1">
                 {images.map((img, i) => (
                   <button key={img.id} onClick={() => setActiveImg(i)}

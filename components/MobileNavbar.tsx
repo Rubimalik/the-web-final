@@ -9,6 +9,7 @@ const navLinks = [
     { label: "UK Sales", href: "/uk-sales" },
     { label: "Export Sales", href: "/export-sales" },
     { label: "Leasing", href: "/leasing" },
+    { label: "Photocopier Rental", href: "/photocopier-rental" },
     { label: "Collection & Storage", href: "/collection-storage" },
     { label: "Sell To Us", href: "/sell-to-us" },
 ]

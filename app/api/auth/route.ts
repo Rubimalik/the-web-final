@@ -1,26 +1,54 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSession } from "@/lib/session";
+import { createSupabaseAnonClient } from "@/lib/supabase";
+import {
+  ensureBootstrapAdminUser,
+  isAdminAuthUser,
+  normalizeEmailAddress,
+} from "@/lib/supabase-auth";
 
 // POST /api/auth — login
 export async function POST(req: NextRequest) {
   try {
     const { email, password } = await req.json();
+    const normalizedEmail =
+      typeof email === "string" ? normalizeEmailAddress(email) : "";
+    const normalizedPassword =
+      typeof password === "string" ? password : "";
 
-    const validEmail    = process.env.ADMIN_EMAIL;
-    const validPassword = process.env.ADMIN_PASSWORD;
-
-    if (!validEmail || !validPassword) {
-      console.error("ADMIN_EMAIL or ADMIN_PASSWORD env vars not set");
-      return NextResponse.json({ error: "Server misconfigured" }, { status: 500 });
+    if (!normalizedEmail || !normalizedPassword) {
+      return NextResponse.json(
+        { error: "Email and password are required" },
+        { status: 400 }
+      );
     }
 
-    if (email !== validEmail || password !== validPassword) {
-      return NextResponse.json({ error: "Invalid email or password" }, { status: 401 });
+    await ensureBootstrapAdminUser(normalizedEmail, normalizedPassword);
+
+    const supabase = createSupabaseAnonClient();
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email: normalizedEmail,
+      password: normalizedPassword,
+    });
+
+    if (error || !data.user) {
+      return NextResponse.json(
+        { error: "Invalid email or password" },
+        { status: 401 }
+      );
+    }
+
+    if (!isAdminAuthUser(data.user)) {
+      return NextResponse.json(
+        { error: "This account does not have admin access" },
+        { status: 403 }
+      );
     }
 
     const session = await getSession();
     session.isLoggedIn = true;
-    session.email = email;
+    session.email = data.user.email ?? normalizedEmail;
+    session.userId = data.user.id;
     await session.save();
 
     return NextResponse.json({ success: true });
