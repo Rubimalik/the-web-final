@@ -1,19 +1,33 @@
-import { prisma } from "@/lib/db";
+import { query, pool } from "@/lib/db";
 
 async function main() {
-  await prisma.category.upsert({
-    where: { slug: "photocopiers" },
-    update: {},
-    create: { name: "Photocopiers", slug: "photocopiers" },
-  });
-  await prisma.category.upsert({
-    where: { slug: "consumables" },
-    update: {},
-    create: { name: "Consumables", slug: "consumables" },
-  });
+  await query(
+    `
+      INSERT INTO "Category" ("name", "slug", "updatedAt")
+      VALUES ($1, $2, NOW())
+      ON CONFLICT ("slug")
+      DO UPDATE SET
+        "name" = EXCLUDED."name",
+        "updatedAt" = NOW()
+    `,
+    ["Photocopiers", "photocopiers"],
+  );
+
+  await query(
+    `
+      INSERT INTO "Category" ("name", "slug", "updatedAt")
+      VALUES ($1, $2, NOW())
+      ON CONFLICT ("slug")
+      DO UPDATE SET
+        "name" = EXCLUDED."name",
+        "updatedAt" = NOW()
+    `,
+    ["Consumables", "consumables"],
+  );
+
   console.log("✓ Seeded: Photocopiers + Consumables");
 }
 
 main()
   .catch(console.error)
-  .finally(() => prisma.$disconnect());
+  .finally(() => pool.end());

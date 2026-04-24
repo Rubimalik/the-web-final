@@ -5,13 +5,32 @@ import { safeReadJsonResponse } from "@/lib/safe-json";
 
 const BASE_URL = "https://buysupply.me";
 
+interface ProductImage {
+  url: string;
+  isPrimary: boolean;
+}
+
+interface ProductCategory {
+  name: string;
+}
+
+interface ProductSeoData {
+  id: number;
+  name: string;
+  description: string | null;
+  price: number | null;
+  tags: string | null;
+  images: ProductImage[];
+  category: ProductCategory | null;
+}
+
 // ── Fetch product server-side for metadata ────────────────────────────────
 async function getProduct(id: string) {
   try {
     const res = await fetch(`${BASE_URL}/api/product/${id}`, {
       next: { revalidate: 3600 },
     });
-    const data = await safeReadJsonResponse<{ data?: unknown; error?: string }>(
+    const data = await safeReadJsonResponse<{ data?: ProductSeoData; error?: string }>(
       res,
       "Product metadata getProduct"
     );
@@ -73,8 +92,8 @@ export async function generateMetadata(
 }
 
 // ── JSON-LD Product Schema ────────────────────────────────────────────────
-function ProductSchema({ product }: { product: any }) {
-  const primaryImg = product.images?.find((i: any) => i.isPrimary) ?? product.images?.[0];
+function ProductSchema({ product }: { product: ProductSeoData }) {
+  const primaryImg = product.images?.find((i) => i.isPrimary) ?? product.images?.[0];
 
   const schema = {
     "@context": "https://schema.org",
@@ -82,7 +101,7 @@ function ProductSchema({ product }: { product: any }) {
     name: product.name,
     description: product.description ?? product.name,
     image: product.images?.length
-      ? product.images.map((i: any) => i.url)
+      ? product.images.map((i) => i.url)
       : [getProductImagePlaceholderUrl()],
     sku: String(product.id),
     brand: {
