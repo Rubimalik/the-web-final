@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createCategory, listCategories } from "@/lib/catalog-store";
 import { requireAdminSession } from "@/lib/session";
+import { safeReadRequestJson } from "@/lib/safe-json";
 
 // GET /api/category — list all categories with product count
 export async function GET() {
@@ -20,7 +21,14 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    const { name, slug } = await req.json();
+    const payload = await safeReadRequestJson<{ name?: string; slug?: string }>(
+      req,
+      "POST /api/category"
+    );
+    if (!payload) {
+      return NextResponse.json({ error: "Invalid or empty request body" }, { status: 400 });
+    }
+    const { name, slug } = payload;
 
     if (!name || !slug)
       return NextResponse.json({ error: "Name and slug are required" }, { status: 400 });

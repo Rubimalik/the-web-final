@@ -1,21 +1,21 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getIronSession } from "iron-session";
-import { SessionData, sessionOptions } from "@/lib/session";
 
-export async function proxy(req: NextRequest) {
-  const res = NextResponse.next();
+export function proxy(req: NextRequest) {
+  const loginUrl = new URL("/login", req.url);
 
-  const session = await getIronSession<SessionData>(req, res, sessionOptions);
+  // ✅ iron-session cookie check (REAL COOKIE)
+  const sessionCookie = req.cookies.get("dashboard_session")?.value;
 
-  if (!session.isLoggedIn || !session.email || !session.userId) {
-    const loginUrl = new URL("/login", req.url);
+  // if no session cookie → redirect
+  if (!sessionCookie) {
     loginUrl.searchParams.set("from", req.nextUrl.pathname);
     return NextResponse.redirect(loginUrl);
   }
 
-  return res;
+  return NextResponse.next();
 }
 
+// Protect only dashboard routes
 export const config = {
   matcher: ["/dashboard/:path*"],
 };

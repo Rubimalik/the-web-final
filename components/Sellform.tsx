@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useRef, useEffect } from "react"
+import { safeReadJsonResponse } from "@/lib/safe-json"
 
 type FormState = "idle" | "loading" | "success" | "error"
 
@@ -166,8 +167,11 @@ export default function SellForm() {
       })
 
       if (!res.ok) {
-        const json = await res.json()
-        throw new Error(json.error || "Something went wrong")
+        const json = await safeReadJsonResponse<{ error?: string }>(
+          res,
+          "SellForm submit enquiry"
+        )
+        throw new Error(json?.error || "Something went wrong")
       }
 
       setState("success")

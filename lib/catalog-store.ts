@@ -635,88 +635,100 @@ export async function seedDefaultCategories() {
 }
 
 export async function getDashboardOverview(): Promise<DashboardOverview> {
-  const [countsResult, categoriesCountResult, recentProductsResult] = await Promise.all([
-    query<{
-      totalProducts: number;
-      activeProducts: number;
-      draftProducts: number;
-      archivedProducts: number;
-    }>(
-      `
-        SELECT
-          COUNT(*)::int AS "totalProducts",
-          COUNT(*) FILTER (WHERE "status" = 'active')::int AS "activeProducts",
-          COUNT(*) FILTER (WHERE "status" = 'draft')::int AS "draftProducts",
-          COUNT(*) FILTER (WHERE "status" = 'archived')::int AS "archivedProducts"
-        FROM "Product"
-      `,
-    ),
-    query<{ totalCategories: number }>(
-      `SELECT COUNT(*)::int AS "totalCategories" FROM "Category"`,
-    ),
-    query<ProductRow>(
-      `
-        SELECT
-          p."id",
-          p."name",
-          p."description",
-          p."url",
-          p."price",
-          p."status",
-          p."tags",
-          p."categoryId" AS "categoryId",
-          p."createdAt" AS "createdAt",
-          p."updatedAt" AS "updatedAt",
-          CASE
-            WHEN c."id" IS NULL THEN NULL
-            ELSE json_build_object(
-              'id', c."id",
-              'name', c."name",
-              'slug', c."slug"
-            )
-          END AS "category",
-          COALESCE(
-            (
-              SELECT json_agg(
-                json_build_object(
-                  'id', pi."id",
-                  'productId', pi."productId",
-                  'url', pi."url",
-                  'key', pi."key",
-                  'isPrimary', pi."isPrimary",
-                  'createdAt', pi."createdAt"
-                )
-                ORDER BY pi."isPrimary" DESC, pi."createdAt" ASC, pi."id" ASC
+  try {
+    const [countsResult, categoriesCountResult, recentProductsResult] = await Promise.all([
+      query<{
+        totalProducts: number;
+        activeProducts: number;
+        draftProducts: number;
+        archivedProducts: number;
+      }>(
+        `
+          SELECT
+            COUNT(*)::int AS "totalProducts",
+            COUNT(*) FILTER (WHERE "status" = 'active')::int AS "activeProducts",
+            COUNT(*) FILTER (WHERE "status" = 'draft')::int AS "draftProducts",
+            COUNT(*) FILTER (WHERE "status" = 'archived')::int AS "archivedProducts"
+          FROM "Product"
+        `,
+      ),
+      query<{ totalCategories: number }>(
+        `SELECT COUNT(*)::int AS "totalCategories" FROM "Category"`,
+      ),
+      query<ProductRow>(
+        `
+          SELECT
+            p."id",
+            p."name",
+            p."description",
+            p."url",
+            p."price",
+            p."status",
+            p."tags",
+            p."categoryId" AS "categoryId",
+            p."createdAt" AS "createdAt",
+            p."updatedAt" AS "updatedAt",
+            CASE
+              WHEN c."id" IS NULL THEN NULL
+              ELSE json_build_object(
+                'id', c."id",
+                'name', c."name",
+                'slug', c."slug"
               )
-              FROM "ProductImage" pi
-              WHERE pi."productId" = p."id"
-            ),
-            '[]'::json
-          ) AS "images"
-        FROM "Product" p
-        LEFT JOIN "Category" c
-          ON c."id" = p."categoryId"
-        ORDER BY p."updatedAt" DESC
-        LIMIT 4
-      `,
-    ),
-  ]);
+            END AS "category",
+            COALESCE(
+              (
+                SELECT json_agg(
+                  json_build_object(
+                    'id', pi."id",
+                    'productId', pi."productId",
+                    'url', pi."url",
+                    'key', pi."key",
+                    'isPrimary', pi."isPrimary",
+                    'createdAt', pi."createdAt"
+                  )
+                  ORDER BY pi."isPrimary" DESC, pi."createdAt" ASC, pi."id" ASC
+                )
+                FROM "ProductImage" pi
+                WHERE pi."productId" = p."id"
+              ),
+              '[]'::json
+            ) AS "images"
+          FROM "Product" p
+          LEFT JOIN "Category" c
+            ON c."id" = p."categoryId"
+          ORDER BY p."updatedAt" DESC
+          LIMIT 4
+        `,
+      ),
+    ]);
 
-  const counts = countsResult.rows[0] ?? {
-    totalProducts: 0,
-    activeProducts: 0,
-    draftProducts: 0,
-    archivedProducts: 0,
-  };
+    const counts = countsResult.rows[0] ?? {
+      totalProducts: 0,
+      activeProducts: 0,
+      draftProducts: 0,
+      archivedProducts: 0,
+    };
 
-  return {
-    totalProducts: counts.totalProducts,
-    activeProducts: counts.activeProducts,
-    draftProducts: counts.draftProducts,
-    archivedProducts: counts.archivedProducts,
-    totalCategories: categoriesCountResult.rows[0]?.totalCategories ?? 0,
-    recentProducts: recentProductsResult.rows.map(mapProductRow),
-  };
+    return {
+      totalProducts: counts.totalProducts,
+      activeProducts: counts.activeProducts,
+      draftProducts: counts.draftProducts,
+      archivedProducts: counts.archivedProducts,
+      totalCategories: categoriesCountResult.rows[0]?.totalCategories ?? 0,
+      recentProducts: recentProductsResult.rows.map(mapProductRow),
+    };
+  } catch (error) {
+    console.error("[catalog-store] Failed to load dashboard overview", error);
+    return {
+      totalProducts: 0,
+      activeProducts: 0,
+      draftProducts: 0,
+      archivedProducts: 0,
+      totalCategories: 0,
+      recentProducts: [],
+    };
+  }
 }
 
 export async function getDashboardNotificationSummary(): Promise<DashboardNotificationSummary> {

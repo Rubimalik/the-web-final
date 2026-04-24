@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { Settings, Mail, Lock, Eye, EyeOff, Save, Loader2, CheckCircle } from "lucide-react";
+import { safeReadJsonResponse } from "@/lib/safe-json";
 
 export default function SettingsPage() {
   const [email, setEmail] = useState("");
@@ -17,12 +18,22 @@ export default function SettingsPage() {
   const [activeTab, setActiveTab] = useState<"email" | "password">("email");
 
   useEffect(() => {
-    fetch("/api/settings")
-      .then((r) => r.json())
-      .then((data) => {
-        setEmail(data.email ?? "");
-        setNewEmail(data.email ?? "");
-      });
+    void (async () => {
+      try {
+        const response = await fetch("/api/settings");
+        const data = await safeReadJsonResponse<{ email?: string; error?: string }>(
+          response,
+          "SettingsPage load settings"
+        );
+        if (!response.ok) {
+          throw new Error(data?.error || "Failed to load settings");
+        }
+        setEmail(data?.email ?? "");
+        setNewEmail(data?.email ?? "");
+      } catch (error) {
+        console.error("[SettingsPage load settings]", error);
+      }
+    })();
   }, []);
 
   const handleEmailUpdate = async (e: React.FormEvent) => {
@@ -45,8 +56,11 @@ export default function SettingsPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ currentPassword, newEmail }),
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error);
+      const data = await safeReadJsonResponse<{ error?: string }>(
+        res,
+        "SettingsPage update email"
+      );
+      if (!res.ok) throw new Error(data?.error || "Failed to update email");
       setMessage({ type: "success", text: "Email updated successfully" });
       setEmail(newEmail);
       setCurrentPassword("");
@@ -85,8 +99,11 @@ export default function SettingsPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ currentPassword, newPassword }),
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error);
+      const data = await safeReadJsonResponse<{ error?: string }>(
+        res,
+        "SettingsPage update password"
+      );
+      if (!res.ok) throw new Error(data?.error || "Failed to update password");
       setMessage({ type: "success", text: "Password updated successfully" });
       setCurrentPassword("");
       setNewPassword("");

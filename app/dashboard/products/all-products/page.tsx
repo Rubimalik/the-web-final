@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import { getAdminProductCategoryBySlug } from "@/lib/admin-product-categories";
 import { getProductImagePlaceholderUrl } from "@/lib/product-image-placeholder";
+import { safeReadJsonResponse } from "@/lib/safe-json";
 
 interface ProductImage {
   id: number;
@@ -113,10 +114,14 @@ function AllProductsPageContent() {
       if (activeCategory?.slug) params.set("slug", activeCategory.slug);
 
       const res = await fetch(`/api/product?${params}`);
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Failed to load");
-      setProducts(data.data);
-      setPagination(data.pagination);
+      const data = await safeReadJsonResponse<{
+        error?: string;
+        data?: Product[];
+        pagination?: Pagination;
+      }>(res, "AllProductsPage fetch products");
+      if (!res.ok) throw new Error(data?.error || "Failed to load");
+      setProducts(data?.data || []);
+      setPagination(data?.pagination || null);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to load products");
     } finally {

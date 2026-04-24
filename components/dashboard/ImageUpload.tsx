@@ -2,6 +2,7 @@
 
 import { useState, useCallback, useEffect, useRef } from "react";
 import { Upload, X, Star, Loader2, CheckCircle2, GripVertical } from "lucide-react";
+import { safeReadJsonResponse } from "@/lib/safe-json";
 
 export interface UploadedImage {
   url: string;
@@ -42,14 +43,19 @@ async function uploadImages(files: File[]) {
     method: "POST",
     body: formData,
   });
-  const data = await res.json();
+  const data = await safeReadJsonResponse<{ error?: string; data?: Array<{ url: string; key: string }> }>(
+    res,
+    "ImageUpload uploadImages"
+  );
 
   if (!res.ok) {
-    throw new Error(data.error || "Upload failed");
+    const serverError = data?.error?.trim();
+    const statusError = res.status ? `Upload failed (${res.status}${res.statusText ? ` ${res.statusText}` : ""})` : "";
+    throw new Error(serverError || statusError || "Upload failed");
   }
 
-  return Array.isArray(data.data)
-    ? (data.data as Array<{ url: string; key: string }>)
+  return Array.isArray(data?.data)
+    ? data.data
     : [];
 }
 
@@ -79,10 +85,16 @@ export function ImageUpload({ onChange }: ImageUploadProps) {
   const dragDepthRef = useRef(0);
   const previewsRef = useRef<PreviewImage[]>([]);
   const inputRef = useRef<HTMLInputElement | null>(null);
+  const onChangeRef = useRef<ImageUploadProps["onChange"]>(onChange);
+  const lastNotifiedSignatureRef = useRef("");
 
   useEffect(() => {
     previewsRef.current = previews;
   }, [previews]);
+
+  useEffect(() => {
+    onChangeRef.current = onChange;
+  }, [onChange]);
 
   useEffect(() => {
     return () => {
@@ -90,20 +102,35 @@ export function ImageUpload({ onChange }: ImageUploadProps) {
     };
   }, []);
 
-  const notify = useCallback(
-    (updated: PreviewImage[]) => {
-      const uploaded = updated
-        .filter((p) => p.uploadedUrl && p.uploadedKey)
-        .map((p) => ({
-          url: p.uploadedUrl!,
-          key: p.uploadedKey!,
-          isPrimary: p.isPrimary,
-          name: p.file.name,
-        }));
-      onChange?.(uploaded);
-    },
-    [onChange]
-  );
+  const buildUploadedImages = useCallback((images: PreviewImage[]) => {
+    return images
+      .filter((p) => p.uploadedUrl && p.uploadedKey)
+      .map((p) => ({
+        url: p.uploadedUrl!,
+        key: p.uploadedKey!,
+        isPrimary: p.isPrimary,
+        name: p.file.name,
+      }));
+  }, []);
+
+  useEffect(() => {
+    const uploadedImages = buildUploadedImages(previews);
+    const signature = JSON.stringify(
+      uploadedImages.map((img) => ({
+        key: img.key,
+        url: img.url,
+        isPrimary: img.isPrimary,
+        name: img.name,
+      }))
+    );
+
+    if (signature === lastNotifiedSignatureRef.current) {
+      return;
+    }
+
+    lastNotifiedSignatureRef.current = signature;
+    onChangeRef.current?.(uploadedImages);
+  }, [buildUploadedImages, previews]);
 
   const syncPrimaryToFirst = useCallback((images: PreviewImage[]) => {
     return images.map((image, index) => ({
@@ -161,12 +188,15 @@ export function ImageUpload({ onChange }: ImageUploadProps) {
             }
             return { ...p, status: "error" as UploadStatus };
           });
-          notify(updated);
           return updated;
         });
       } catch (err) {
         console.error("Upload failed:", err);
-        setUploadFeedback("Upload failed. Please verify the Supabase storage configuration and try again.");
+        setUploadFeedback(
+          err instanceof Error && err.message
+            ? err.message
+            : "Upload failed. Please verify the Supabase storage configuration and try again."
+        );
         setPreviews((prev) =>
           prev.map((p) =>
             newPreviews.find((np) => np.id === p.id)
@@ -178,7 +208,7 @@ export function ImageUpload({ onChange }: ImageUploadProps) {
         setIsUploading(false);
       }
     },
-    [notify]
+    []
   );
 
   // ✅ Dynamic import — only runs in browser, never on server
@@ -284,7 +314,6 @@ export function ImageUpload({ onChange }: ImageUploadProps) {
       if (updated.length < MAX_FILES) {
         setUploadFeedback("");
       }
-      notify(updated);
       return updated;
     });
   };
@@ -292,7 +321,6 @@ export function ImageUpload({ onChange }: ImageUploadProps) {
   const handleSetPrimary = (id: string) => {
     setPreviews((prev) => {
       const updated = moveImageToFront(prev, id);
-      notify(updated);
       return updated;
     });
   };
@@ -326,7 +354,6 @@ export function ImageUpload({ onChange }: ImageUploadProps) {
       const [item] = updated.splice(from, 1);
       updated.splice(to, 0, item);
       const normalized = syncPrimaryToFirst(updated);
-      notify(normalized);
       return normalized;
     });
     setDraggedId(null);

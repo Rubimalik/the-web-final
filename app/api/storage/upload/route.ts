@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdminSession } from "@/lib/session";
 import { deleteProductImages, uploadProductImages } from "@/lib/supabase-storage";
+import { safeReadRequestJson } from "@/lib/safe-json";
 
 const MAX_FILES = 8;
 const MAX_IMAGE_SIZE_BYTES = 8 * 1024 * 1024;
@@ -10,11 +11,11 @@ function isAllowedImageFile(file: File) {
 }
 
 export async function POST(req: NextRequest) {
-  if (!(await requireAdminSession())) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
   try {
+    if (!(await requireAdminSession())) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
     const formData = await req.formData();
     const files = formData
       .getAll("files")
@@ -55,20 +56,30 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ data: uploadedImages });
   } catch (err) {
     console.error("[POST /api/storage/upload]", err);
+    const errorMessage =
+      err instanceof Error && err.message
+        ? err.message
+        : "Failed to upload images";
     return NextResponse.json(
-      { error: "Failed to upload images" },
+      { error: errorMessage },
       { status: 500 }
     );
   }
 }
 
 export async function DELETE(req: NextRequest) {
-  if (!(await requireAdminSession())) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
   try {
-    const body = await req.json();
+    if (!(await requireAdminSession())) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const body = await safeReadRequestJson<{ keys?: unknown[] }>(
+      req,
+      "DELETE /api/storage/upload"
+    );
+    if (!body) {
+      return NextResponse.json({ success: true });
+    }
     const keys = Array.isArray(body?.keys)
       ? body.keys.filter((key: unknown): key is string => typeof key === "string")
       : [];

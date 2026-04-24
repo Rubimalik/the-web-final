@@ -5,6 +5,7 @@ import { useForm, Controller } from "react-hook-form";
 import { useRouter } from "next/navigation";
 import { ImageUpload, type UploadedImage } from "./ImageUpload";
 import { type AdminProductCategorySlug } from "@/lib/admin-product-categories";
+import { safeReadJsonResponse } from "@/lib/safe-json";
 import {
   Package, DollarSign, Layers, Info, AlertCircle,
   ChevronDown, CheckCircle2, Tag, Link2,
@@ -122,10 +123,22 @@ export function ProductUploadForm({
   });
 
   useEffect(() => {
-    fetch("/api/category")
-      .then((r) => r.json())
-      .then((d) => setCategories(d.data || []))
-      .catch(() => { });
+    void (async () => {
+      try {
+        const response = await fetch("/api/category");
+        const data = await safeReadJsonResponse<{ data?: Category[]; error?: string }>(
+          response,
+          "ProductUploadForm categories"
+        );
+        if (!response.ok) {
+          throw new Error(data?.error || "Failed to load categories");
+        }
+        setCategories(data?.data || []);
+      } catch (error) {
+        console.error("[ProductUploadForm categories]", error);
+        setCategories([]);
+      }
+    })();
   }, []);
 
   useEffect(() => {
@@ -179,8 +192,11 @@ export function ProductUploadForm({
       });
 
       if (!res.ok) {
-        const err = await res.json();
-        throw new Error(err.error || "Failed to create product");
+        const err = await safeReadJsonResponse<{ error?: string }>(
+          res,
+          "ProductUploadForm create product"
+        );
+        throw new Error(err?.error || "Failed to create product");
       }
 
       setSubmitState("success");
@@ -237,7 +253,7 @@ export function ProductUploadForm({
 
           <Card title="Product Images" icon={Package}>
             <Controller name="images" control={control}
-              render={({ field }) => <ImageUpload onChange={(imgs) => field.onChange(imgs)} />} />
+              render={({ field }) => <ImageUpload value={field.value} onChange={field.onChange} />} />
             {submitError.includes("image") && (
               <p className="mt-2 flex items-center gap-1.5 text-xs text-red-400">
                 <AlertCircle className="w-3.5 h-3.5" />{submitError}

@@ -6,6 +6,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { Search } from "lucide-react";
 import NavBar from "@/components/Navbar";
 import { getProductImagePlaceholderUrl } from "@/lib/product-image-placeholder";
+import { safeReadJsonResponse } from "@/lib/safe-json";
 
 interface ProductImage { id: number; url: string; isPrimary: boolean; }
 interface Category { id: number; name: string; slug: string; }
@@ -103,10 +104,14 @@ function ProductsInner() {
       if (search) params.set("search", search);
 
       const res = await fetch(`/api/product?${params}`);
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Failed to load");
-      setProducts(data.data || []);
-      setTotalPages(data.pagination?.totalPages || 1);
+      const data = await safeReadJsonResponse<{
+        error?: string;
+        data?: Product[];
+        pagination?: { totalPages?: number };
+      }>(res, "ProductsPage fetch products");
+      if (!res.ok) throw new Error(data?.error || "Failed to load");
+      setProducts(data?.data || []);
+      setTotalPages(data?.pagination?.totalPages || 1);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to fetch");
       setProducts([]);

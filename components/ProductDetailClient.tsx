@@ -6,6 +6,7 @@ import { ChevronLeft, ChevronRight, PhoneCall, Mail, ImageOff, Loader2, Calendar
 import { HeicImage } from "@/components/HeicImage";
 import NavBar from "@/components/Navbar";
 import { getProductImagePlaceholderUrl } from "@/lib/product-image-placeholder";
+import { safeReadJsonResponse } from "@/lib/safe-json";
 
 interface ProductImage { id: number; url: string; isPrimary: boolean; }
 interface Category { id: number; name: string; slug: string; }
@@ -51,14 +52,26 @@ export default function ProductDetailPage() {
   const [lightbox, setLightbox] = useState(false);
 
   useEffect(() => {
-    fetch(`/api/product/${id}`)
-      .then((r) => r.json())
-      .then((d) => {
-        if (d.error) throw new Error(d.error);
-        setProduct(d.data);
-      })
-      .catch((e) => setError(e.message))
-      .finally(() => setLoading(false));
+    void (async () => {
+      try {
+        const response = await fetch(`/api/product/${id}`);
+        const data = await safeReadJsonResponse<{ data?: Product; error?: string }>(
+          response,
+          "ProductDetailClient load product"
+        );
+        if (!response.ok) {
+          throw new Error(data?.error || "Failed to load product");
+        }
+        if (!data?.data) {
+          throw new Error("Product not found");
+        }
+        setProduct(data.data);
+      } catch (error) {
+        setError(error instanceof Error ? error.message : "Failed to load product");
+      } finally {
+        setLoading(false);
+      }
+    })();
   }, [id]);
 
   // Keyboard nav for lightbox

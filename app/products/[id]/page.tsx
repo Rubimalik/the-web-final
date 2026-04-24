@@ -1,6 +1,7 @@
 import { Metadata } from "next";
 import ProductDetailPage from "@/components/ProductDetailClient";
 import { getProductImagePlaceholderUrl } from "@/lib/product-image-placeholder";
+import { safeReadJsonResponse } from "@/lib/safe-json";
 
 const BASE_URL = "https://buysupply.me";
 
@@ -10,8 +11,15 @@ async function getProduct(id: string) {
     const res = await fetch(`${BASE_URL}/api/product/${id}`, {
       next: { revalidate: 3600 },
     });
-    const data = await res.json();
-    return data.data ?? null;
+    const data = await safeReadJsonResponse<{ data?: unknown; error?: string }>(
+      res,
+      "Product metadata getProduct"
+    );
+    if (!res.ok) {
+      console.error("[Product metadata getProduct]", data?.error || "Request failed");
+      return null;
+    }
+    return data?.data ?? null;
   } catch {
     return null;
   }

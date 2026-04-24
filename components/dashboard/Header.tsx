@@ -4,6 +4,7 @@ import Link from "next/link";
 import { Bell, Loader2, LogOut, Search } from "lucide-react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
+import { safeReadJsonResponse } from "@/lib/safe-json";
 
 type NotificationItem = {
   id: string;
@@ -46,13 +47,16 @@ export function Header() {
         credentials: "include",
         cache: "no-store",
       });
-      const payload = await response.json();
+      const payload = await safeReadJsonResponse<{ error?: string; items?: NotificationItem[] }>(
+        response,
+        "Header notifications"
+      );
 
       if (!response.ok) {
-        throw new Error(payload.error || "Failed to load notifications");
+        throw new Error(payload?.error || "Failed to load notifications");
       }
 
-      setNotifications(payload.items ?? []);
+      setNotifications(payload?.items ?? []);
     } catch (error) {
       setNotifications([]);
       setNotificationsError(

@@ -1,4 +1,5 @@
 import { MetadataRoute } from "next";
+import { safeReadJsonResponse } from "@/lib/safe-json";
 
 const BASE_URL = "https://buysupply.me";
 
@@ -13,8 +14,15 @@ async function getAllProducts() {
     const res = await fetch(`${BASE_URL}/api/product?status=active&limit=1000&page=1`, {
       next: { revalidate: 3600 }, // re-fetch every hour
     });
-    const data = await res.json();
-    return (data.data ?? []) as SitemapProduct[];
+    const data = await safeReadJsonResponse<{ data?: SitemapProduct[]; error?: string }>(
+      res,
+      "sitemap getAllProducts"
+    );
+    if (!res.ok) {
+      console.error("[sitemap getAllProducts]", data?.error || "Request failed");
+      return [] as SitemapProduct[];
+    }
+    return (data?.data ?? []) as SitemapProduct[];
   } catch {
     return [] as SitemapProduct[];
   }

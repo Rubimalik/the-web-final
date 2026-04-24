@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireAdminSession } from "@/lib/session";
 import { deleteProduct, getProductById, updateProduct } from "@/lib/catalog-store";
 import { deleteProductImages } from "@/lib/supabase-storage";
+import { safeReadRequestJson } from "@/lib/safe-json";
 import { z } from "zod";
 
 const productImageSchema = z.object({
@@ -85,7 +86,10 @@ export async function PUT(
     if (isNaN(productId))
       return NextResponse.json({ error: "Invalid ID" }, { status: 400 });
 
-    const body = await req.json();
+    const body = await safeReadRequestJson(req, "PUT /api/product/:id");
+    if (!body) {
+      return NextResponse.json({ error: "Invalid or empty request body" }, { status: 400 });
+    }
     uploadedKeysToCleanup = extractUploadedImageKeys(body?.newImages);
 
     const parsed = updateProductSchema.safeParse(body);

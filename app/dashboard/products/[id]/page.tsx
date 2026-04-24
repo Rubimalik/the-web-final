@@ -10,6 +10,7 @@ import {
 import { HeicImage } from "@/components/HeicImage";
 import { ImageUpload, type UploadedImage } from "@/components/dashboard/ImageUpload";
 import Link from "next/link";
+import { safeReadJsonResponse } from "@/lib/safe-json";
 
 interface ProductImage { id: number; url: string; isPrimary: boolean; }
 interface Category { id: number; name: string; slug: string; }
@@ -56,24 +57,42 @@ export default function ProductEditPage() {
     const [categoryId, setCategoryId] = useState("");
 
     useEffect(() => {
-        Promise.all([
-            fetch(`/api/product/${id}`).then((r) => r.json()),
-            fetch("/api/category").then((r) => r.json()),
-        ]).then(([pData, cData]) => {
-            if (pData.error) throw new Error(pData.error);
-            const p: Product = pData.data;
-            setProduct(p);
-            setEditedImages(p.images);
-            setName(p.name);
-            setDescription(p.description || "");
-            setPrice(p.price != null ? String(p.price) : "");
-            setStatus(p.status);
-            setTags(p.tags || "");
-            setUrl(p.url || "");
-            setCategoryId(p.categoryId ? String(p.categoryId) : "");
-            setCategories(cData.data || []);
-        }).catch((e) => setError(e.message))
-            .finally(() => setLoading(false));
+        void (async () => {
+            try {
+                const [productResponse, categoryResponse] = await Promise.all([
+                    fetch(`/api/product/${id}`),
+                    fetch("/api/category"),
+                ]);
+                const [pData, cData] = await Promise.all([
+                    safeReadJsonResponse<{ data?: Product; error?: string }>(
+                        productResponse,
+                        "ProductEditPage load product"
+                    ),
+                    safeReadJsonResponse<{ data?: Category[]; error?: string }>(
+                        categoryResponse,
+                        "ProductEditPage load categories"
+                    ),
+                ]);
+                if (!productResponse.ok) throw new Error(pData?.error || "Failed to load product");
+                if (!categoryResponse.ok) throw new Error(cData?.error || "Failed to load categories");
+                if (!pData?.data) throw new Error("Product not found");
+                const p = pData.data;
+                setProduct(p);
+                setEditedImages(p.images);
+                setName(p.name);
+                setDescription(p.description || "");
+                setPrice(p.price != null ? String(p.price) : "");
+                setStatus(p.status);
+                setTags(p.tags || "");
+                setUrl(p.url || "");
+                setCategoryId(p.categoryId ? String(p.categoryId) : "");
+                setCategories(cData?.data || []);
+            } catch (e) {
+                setError(e instanceof Error ? e.message : "Failed to load");
+            } finally {
+                setLoading(false);
+            }
+        })();
     }, [id]);
 
     useEffect(() => {
@@ -165,8 +184,12 @@ export default function ProductEditPage() {
                         : undefined,
                 }),
             });
-            if (!res.ok) throw new Error("Failed to save");
-            const data = await res.json();
+            const data = await safeReadJsonResponse<{ data?: Product; error?: string }>(
+                res,
+                "ProductEditPage save product"
+            );
+            if (!res.ok) throw new Error(data?.error || "Failed to save");
+            if (!data?.data) throw new Error("Failed to save");
             setProduct(data.data);
             setEditedImages(data.data.images);
             setNewImages([]);

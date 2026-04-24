@@ -2,12 +2,19 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { Resend } from "resend";
+import { safeReadRequestJson } from "@/lib/safe-json";
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
 export async function POST(req: NextRequest) {
   try {
-    const body = await req.json();
+    const body = await safeReadRequestJson<Record<string, string>>(req, "POST /api/sell-enquiry");
+    if (!body) {
+      return NextResponse.json(
+        { error: "Invalid or empty request body" },
+        { status: 400 },
+      );
+    }
     const {
       // Equipment
       make, productType, model, quantity, condition, status, notes,

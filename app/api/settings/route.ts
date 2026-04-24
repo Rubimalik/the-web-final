@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireAdminSession } from "@/lib/session";
 import { createSupabaseAnonClient, createSupabaseServiceRoleClient } from "@/lib/supabase";
 import { normalizeEmailAddress } from "@/lib/supabase-auth";
+import { safeReadRequestJson } from "@/lib/safe-json";
 
 export async function GET() {
   const session = await requireAdminSession();
@@ -18,7 +19,15 @@ export async function PUT(req: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const { currentPassword, newEmail, newPassword } = await req.json();
+  const payload = await safeReadRequestJson<{
+    currentPassword?: string;
+    newEmail?: string;
+    newPassword?: string;
+  }>(req, "PUT /api/settings");
+  if (!payload) {
+    return NextResponse.json({ error: "Invalid or empty request body" }, { status: 400 });
+  }
+  const { currentPassword, newEmail, newPassword } = payload;
   const normalizedCurrentPassword =
     typeof currentPassword === "string" ? currentPassword : "";
   const normalizedNewEmail =

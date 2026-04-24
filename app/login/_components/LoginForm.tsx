@@ -3,6 +3,7 @@
 import { useState, FormEvent } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Loader2, AlertCircle, Eye, EyeOff, ShieldCheck } from "lucide-react";
+import { safeReadJsonResponse } from "@/lib/safe-json";
 
 export default function LoginPage() {
     const router = useRouter();
@@ -27,10 +28,13 @@ export default function LoginPage() {
                 body: JSON.stringify({ email, password }),
             });
 
-            const data = await res.json();
+            const data = await safeReadJsonResponse<{ error?: string }>(
+                res,
+                "LoginForm login"
+            );
 
             if (!res.ok) {
-                setError(data.error || "Login failed");
+                setError(data?.error || "Login failed");
                 return;
             }
 

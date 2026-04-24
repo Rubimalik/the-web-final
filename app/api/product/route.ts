@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireAdminSession } from "@/lib/session";
 import { deleteProductImages } from "@/lib/supabase-storage";
 import { createProduct, listProducts } from "@/lib/catalog-store";
+import { safeReadRequestJson } from "@/lib/safe-json";
 import { z } from "zod";
 
 const createProductSchema = z.object({
@@ -57,7 +58,10 @@ export async function POST(req: NextRequest) {
   let uploadedKeysToCleanup: string[] = [];
 
   try {
-    const body   = await req.json();
+    const body = await safeReadRequestJson(req, "POST /api/product");
+    if (!body) {
+      return NextResponse.json({ error: "Invalid or empty request body" }, { status: 400 });
+    }
     const parsed = createProductSchema.safeParse(body);
 
     if (!parsed.success)

@@ -1,16 +1,21 @@
 import { Pool, type PoolClient, type PoolConfig, type QueryResultRow } from "pg";
 
-function requireEnv(name: string) {
-  const value = process.env[name];
-  if (!value) {
-    throw new Error(`${name} is not configured`);
+function resolveConnectionString() {
+  const candidates = ["DATABASE_URL", "POSTGRES_URL", "DIRECT_URL"] as const;
+  for (const key of candidates) {
+    const value = process.env[key];
+    if (value) {
+      return value;
+    }
   }
 
-  return value;
+  throw new Error(
+    "Database connection string is not configured. Set DATABASE_URL (or POSTGRES_URL / DIRECT_URL).",
+  );
 }
 
 function resolvePoolConfig(): PoolConfig {
-  const connectionString = requireEnv("DATABASE_URL");
+  const connectionString = resolveConnectionString();
   const isLocalDatabase =
     connectionString.includes("localhost") ||
     connectionString.includes("127.0.0.1");
