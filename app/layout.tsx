@@ -3,6 +3,7 @@ import localFont from "next/font/local";
 import { Roboto } from "next/font/google";
 import { Metadata } from "next";
 import "./globals.css";
+import CartProvider from "@/components/CartProvider";
 
 const myriadPro = localFont({
   src: [
@@ -146,7 +147,7 @@ export default function RootLayout({
       <body
         className={`antialiased ${myriadPro.variable} ${roboto.variable}  bg-white text-gray-900`}
       >
-        {children}
+        <CartProvider>{children}</CartProvider>
       </body>
     </html>
   );

@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
-import { requireAdminSession } from "@/lib/session";
 import { deleteProductImages } from "@/lib/supabase-storage";
 import { createProduct, listProducts } from "@/lib/catalog-store";
 import { safeReadRequestJson } from "@/lib/safe-json";
 import { z } from "zod";
+import { getAuthenticatedProfile } from "@/lib/auth/getAuthenticatedProfile";
 
 const createProductSchema = z.object({
   name:        z.string().min(3),
@@ -51,7 +51,8 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
-  if (!(await requireAdminSession())) {
+  const auth = await getAuthenticatedProfile();
+  if (auth.status !== "authenticated" || auth.role !== "admin" || !auth.onboarding_completed) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 

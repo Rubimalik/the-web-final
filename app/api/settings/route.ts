@@ -1,21 +1,21 @@
 import { NextRequest, NextResponse } from "next/server";
-import { requireAdminSession } from "@/lib/session";
 import { createSupabaseAnonClient, createSupabaseServiceRoleClient } from "@/lib/supabase";
 import { normalizeEmailAddress } from "@/lib/supabase-auth";
 import { safeReadRequestJson } from "@/lib/safe-json";
+import { getAuthenticatedProfile } from "@/lib/auth/getAuthenticatedProfile";
 
 export async function GET() {
-  const session = await requireAdminSession();
-  if (!session) {
+  const auth = await getAuthenticatedProfile();
+  if (auth.status !== "authenticated" || auth.role !== "admin" || !auth.onboarding_completed) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  return NextResponse.json({ email: session.email });
+  return NextResponse.json({ email: auth.user.email });
 }
 
 export async function PUT(req: NextRequest) {
-  const session = await requireAdminSession();
-  if (!session) {
+  const auth = await getAuthenticatedProfile();
+  if (auth.status !== "authenticated" || auth.role !== "admin" || !auth.onboarding_completed) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
@@ -57,7 +57,7 @@ export async function PUT(req: NextRequest) {
 
   const supabase = createSupabaseAnonClient();
   const { error: authError } = await supabase.auth.signInWithPassword({
-    email: session.email,
+    email: auth.user.email ?? "",
     password: normalizedCurrentPassword,
   });
 
@@ -74,7 +74,7 @@ export async function PUT(req: NextRequest) {
     password?: string;
   } = {};
 
-  if (normalizedNewEmail && normalizedNewEmail !== session.email) {
+  if (normalizedNewEmail && normalizedNewEmail !== auth.user.email) {
     updatePayload.email = normalizedNewEmail;
     updatePayload.email_confirm = true;
   }
@@ -89,7 +89,7 @@ export async function PUT(req: NextRequest) {
 
   const adminSupabase = createSupabaseServiceRoleClient();
   const { data, error } = await adminSupabase.auth.admin.updateUserById(
-    session.userId,
+    auth.user.id,
     updatePayload
   );
 
@@ -100,8 +100,7 @@ export async function PUT(req: NextRequest) {
     );
   }
 
-  session.email = data.user.email ?? session.email;
-  await session.save();
+  // Session cache is best-effort; authorization always uses public.profiles.
 
   return NextResponse.json({ success: true });
 }

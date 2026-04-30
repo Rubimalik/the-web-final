@@ -1,4 +1,5 @@
 import SellForm from "./Sellform";
+import { Mail, Phone } from "lucide-react";
 
 export default function UKSalesSection() {
     return (
@@ -8,7 +9,7 @@ export default function UKSalesSection() {
 
                 {/* ================= UK SALES ================= */}
                 <div id="uk-sales" className="scroll-mt-24">
-                    <h2 className="text-3xl md:text-4xl font-bold mb-12 text-center">
+                    <h2 className="text-3xl md:text-4xl font-bold mb-12 text-center brand-title">
                         UK SALES
                     </h2>
 
@@ -76,7 +77,7 @@ export default function UKSalesSection() {
                 {/* ================= EXPORT SALES ================= */}
                 <div id="export-sales" className="border-t border-white/10 pt-16 scroll-mt-24">
 
-                    <h2 className="text-3xl md:text-4xl font-bold mb-12 text-center">
+                    <h2 className="text-3xl md:text-4xl font-bold mb-12 text-center brand-title">
                         EXPORT SALES
                     </h2>
 
@@ -171,7 +172,7 @@ export default function UKSalesSection() {
                 {/* ================= LEASE RETURN SPECIALISTS ================= */}
                 <div id="leasing" className="border-t border-white/10 pt-16 scroll-mt-24">
 
-                    <h2 className="text-3xl md:text-4xl font-bold mb-12 text-center">
+                    <h2 className="text-3xl md:text-4xl font-bold mb-12 text-center brand-title">
                         LEASING
                     </h2>
 
@@ -234,7 +235,7 @@ export default function UKSalesSection() {
                 {/* ================= COLLECTION & STORAGE ================= */}
                 <div id="collection-storage" className="border-t border-white/10 pt-16 scroll-mt-24">
 
-                    <h2 className="text-3xl md:text-4xl font-bold mb-12 text-center">
+                    <h2 className="text-3xl md:text-4xl font-bold mb-12 text-center brand-title">
                         Collection & Storage
                     </h2>
 
@@ -328,7 +329,7 @@ export default function UKSalesSection() {
                 {/* ================= SELL YOUR PHOTOCOPIERS / PRINTERS & UNUSED TONERS ================= */}
                 <div id="sell-your-copier" className="border-t border-white/10 pt-16 scroll-mt-24">
 
-                    <h2 className="text-3xl md:text-4xl font-bold mb-12 text-center">
+                    <h2 className="text-3xl md:text-4xl font-bold mb-12 text-center brand-title">
                         Sell Your Photocopiers / Printers & Unused Toners
                     </h2>
 
@@ -477,7 +478,7 @@ export default function UKSalesSection() {
 
                 {/* ================= CONTACT ================= */}
                 <div className="border-t border-white/10 mt-16 pt-16 text-center">
-                    <h2 className="text-3xl md:text-4xl font-bold mb-4">Get In Touch</h2>
+                    <h2 className="text-3xl md:text-4xl font-bold mb-4 brand-title">Get In Touch</h2>
                     <p className="text-white/60 mb-8">
                         Ready to buy, sell, or partner with us? Contact our team today.
                     </p>
@@ -486,7 +487,7 @@ export default function UKSalesSection() {
                             href="tel:01753971125"
                             className="flex items-center gap-3 bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg px-6 py-4 transition group"
                         >
-                            <span className="text-2xl">📞</span>
+                            <Phone className="h-6 w-6 brand-icon" />
                             <div className="text-left">
                                 <p className="text-white/40 text-xs uppercase tracking-widest mb-0.5">Phone</p>
                                 <p className="text-white font-semibold">01753 971125</p>
@@ -496,7 +497,7 @@ export default function UKSalesSection() {
                             href="mailto:Sales@buysupply.me"
                             className="flex items-center gap-3 bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg px-6 py-4 transition group"
                         >
-                            <span className="text-2xl">📧</span>
+                            <Mail className="h-6 w-6 brand-icon" />
                             <div className="text-left">
                                 <p className="text-white/40 text-xs uppercase tracking-widest mb-0.5">Email</p>
                                 <p className="text-white font-semibold">Sales@buysupply.me</p>

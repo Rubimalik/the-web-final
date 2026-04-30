@@ -1,13 +1,14 @@
 import { NextResponse } from "next/server";
 import { getIronSession } from "iron-session";
 import { sessionOptions, type SessionData } from "@/lib/session";
-import { createSupabaseAnonClient } from "@/lib/supabase";
+import { createSupabaseAnonClient, createSupabaseServiceRoleClient } from "@/lib/supabase";
 import { safeReadRequestJson } from "@/lib/safe-json";
 import {
   ensureBootstrapAdminUser,
-  isAdminAuthUser,
   normalizeEmailAddress,
 } from "@/lib/supabase-auth";
+import { getAuthenticatedProfile } from "@/lib/auth/getAuthenticatedProfile";
+import { updateUserRole } from "@/lib/auth/updateUserRole";
 
 // POST /api/auth — login
 export async function POST(req: Request) {
@@ -45,17 +46,10 @@ export async function POST(req: Request) {
       password: normalizedPassword,
     });
 
-    if (error || !data.user) {
+    if (error || !data.user || !data.session?.access_token) {
       return NextResponse.json(
         { error: "Invalid email or password" },
         { status: 401 },
-      );
-    }
-
-    if (!isAdminAuthUser(data.user)) {
-      return NextResponse.json(
-        { error: "This account does not have admin access" },
-        { status: 403 },
       );
     }
 
@@ -66,6 +60,40 @@ export async function POST(req: Request) {
     session.email = data.user.email ?? normalizedEmail;
     session.userId = data.user.id;
 
+    // Server-side admin assignment: DB is the source of truth.
+    // We ignore any metadata role and set `public.profiles.role` explicitly.
+    const serviceSupabase = createSupabaseServiceRoleClient();
+    const userMetadata = (data.user.user_metadata ?? {}) as {
+      full_name?: string | null;
+      avatar_url?: string | null;
+    };
+    const fullName = userMetadata.full_name ?? null;
+    const avatarUrl = userMetadata.avatar_url ?? null;
+
+    await serviceSupabase.from("profiles").upsert({
+      id: data.user.id,
+      full_name: fullName,
+      avatar_url: avatarUrl,
+      onboarding_step: 3,
+    });
+
+    await updateUserRole(data.user.id, "admin");
+
+    // Verify DB-backed role via unified helper.
+    const auth = await getAuthenticatedProfile({
+      accessToken: data.session.access_token,
+      refreshToken: data.session.refresh_token,
+    });
+
+    if (auth.status !== "authenticated" || auth.role !== "admin" || !auth.onboarding_completed) {
+      return NextResponse.json(
+        { error: "This account does not have admin access" },
+        { status: 403 },
+      );
+    }
+
+    session.supabaseAccessToken = data.session.access_token;
+    session.supabaseRefreshToken = data.session.refresh_token;
     await session.save();
 
     return NextResponse.json({ success: true });

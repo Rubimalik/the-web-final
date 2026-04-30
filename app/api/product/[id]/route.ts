@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
-import { requireAdminSession } from "@/lib/session";
 import { deleteProduct, getProductById, updateProduct } from "@/lib/catalog-store";
 import { deleteProductImages } from "@/lib/supabase-storage";
 import { safeReadRequestJson } from "@/lib/safe-json";
 import { z } from "zod";
+import { getAuthenticatedProfile } from "@/lib/auth/getAuthenticatedProfile";
 
 const productImageSchema = z.object({
   url: z.string().url(),
@@ -74,7 +74,8 @@ export async function PUT(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  if (!(await requireAdminSession())) {
+  const auth = await getAuthenticatedProfile();
+  if (auth.status !== "authenticated" || auth.role !== "admin" || !auth.onboarding_completed) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
@@ -171,7 +172,8 @@ export async function DELETE(
   _req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  if (!(await requireAdminSession())) {
+  const auth = await getAuthenticatedProfile();
+  if (auth.status !== "authenticated" || auth.role !== "admin" || !auth.onboarding_completed) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 

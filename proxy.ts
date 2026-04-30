@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 
 export function proxy(req: NextRequest) {
-  const loginUrl = new URL("/login", req.url);
+  const loginUrl = new URL("/signin", req.url);
 
   // ✅ iron-session cookie check (REAL COOKIE)
   const sessionCookie = req.cookies.get("dashboard_session")?.value;

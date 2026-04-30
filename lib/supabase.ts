@@ -15,10 +15,30 @@ function requireEnv(name: string) {
   return value;
 }
 
+function requireSupabaseUrl() {
+  return (
+    process.env.NEXT_PUBLIC_SUPABASE_URL ||
+    process.env.SUPABASE_URL ||
+    (() => {
+      throw new Error("SUPABASE_URL is not configured");
+    })()
+  );
+}
+
+function requireSupabaseAnonKey() {
+  return (
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
+    process.env.SUPABASE_ANON_KEY ||
+    (() => {
+      throw new Error("SUPABASE_ANON_KEY is not configured");
+    })()
+  );
+}
+
 export function createSupabaseAnonClient() {
   return createClient(
-    requireEnv("NEXT_PUBLIC_SUPABASE_URL"),
-    requireEnv("NEXT_PUBLIC_SUPABASE_ANON_KEY"),
+    requireSupabaseUrl(),
+    requireSupabaseAnonKey(),
     {
       auth: authOptions,
     }
@@ -27,7 +47,7 @@ export function createSupabaseAnonClient() {
 
 export function createSupabaseServiceRoleClient() {
   return createClient(
-    requireEnv("NEXT_PUBLIC_SUPABASE_URL"),
+    requireSupabaseUrl(),
     requireEnv("SUPABASE_SERVICE_ROLE_KEY"),
     {
       auth: authOptions,

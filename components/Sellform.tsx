@@ -5,11 +5,11 @@ import { safeReadJsonResponse } from "@/lib/safe-json"
 
 type FormState = "idle" | "loading" | "success" | "error"
 
-const inputClass = `bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white placeholder-white/20
-  focus:outline-none focus:border-white/30 focus:bg-white/[0.08]
+const inputClass = `bg-[#f5f5f5] border border-black/30 rounded-sm px-4 py-3.5 text-black placeholder-black/45
+  focus:outline-none focus:border-[var(--brand-cyan)] focus:bg-white
   transition-all duration-200 text-sm w-full`
 
-const labelClass = "text-white/50 text-xs uppercase tracking-widest"
+const labelClass = "text-black/70 text-xs uppercase tracking-widest"
 
 // ── Custom Dropdown ──────────────────────────────────────────────
 interface DropdownProps {
@@ -47,15 +47,15 @@ function CustomDropdown({ id, name, required, placeholder, options, value, onCha
         onClick={() => setOpen(prev => !prev)}
         className={`
           w-full flex items-center justify-between
-          bg-white/5 border rounded-lg px-4 py-3 text-sm
+          bg-[#f5f5f5] border rounded-sm px-4 py-3.5 text-sm
           transition-all duration-200 text-left
           ${open
-            ? "border-white/30 bg-white/[0.08]"
-            : "border-white/10 hover:border-white/20 hover:bg-white/[0.07]"
+            ? "border-[var(--brand-cyan)] bg-white"
+            : "border-black/30 hover:border-black/50"
           }
         `}
       >
-        <span className={selected ? "text-white" : "text-white/20"}>
+        <span className={selected ? "text-black" : "text-black/45"}>
           {selected ? selected.label : placeholder}
         </span>
 
@@ -69,7 +69,7 @@ function CustomDropdown({ id, name, required, placeholder, options, value, onCha
           strokeWidth="2"
           strokeLinecap="round"
           strokeLinejoin="round"
-          className={`text-white/40 shrink-0 transition-transform duration-300 ${open ? "rotate-180" : "rotate-0"}`}
+          className={`text-black/50 shrink-0 transition-transform duration-300 ${open ? "rotate-180" : "rotate-0"}`}
         >
           <polyline points="6 9 12 15 18 9" />
         </svg>
@@ -79,7 +79,7 @@ function CustomDropdown({ id, name, required, placeholder, options, value, onCha
       <div
         className={`
           absolute z-50 left-0 right-0 mt-2
-          bg-[#111] border border-white/10 rounded-lg
+          bg-white border border-black/20 rounded-sm
           overflow-hidden shadow-[0_16px_48px_rgba(0,0,0,0.6)]
           transition-all duration-200 origin-top
           ${open
@@ -97,10 +97,10 @@ function CustomDropdown({ id, name, required, placeholder, options, value, onCha
               w-full text-left px-4 py-3 text-sm
               transition-all duration-150
               flex items-center justify-between
-              ${i !== 0 ? "border-t border-white/[0.06]" : ""}
+              ${i !== 0 ? "border-t border-black/[0.08]" : ""}
               ${value === opt.value
-                ? "bg-white/10 text-white"
-                : "text-white/60 hover:bg-white/5 hover:text-white"
+                ? "bg-cyan-50 text-black"
+                : "text-black/75 hover:bg-black/[0.04] hover:text-black"
               }
             `}
           >
@@ -117,7 +117,7 @@ function CustomDropdown({ id, name, required, placeholder, options, value, onCha
                 strokeWidth="2.5"
                 strokeLinecap="round"
                 strokeLinejoin="round"
-                className="text-white/60"
+                className="text-black/60"
               >
                 <polyline points="20 6 9 17 4 12" />
               </svg>
@@ -178,64 +178,64 @@ export default function SellForm() {
       form.reset()
       setCondition("")
       setStatus("")
-    } catch (err: any) {
+    } catch (err: unknown) {
       setState("error")
-      setErrorMsg(err.message || "Failed to send. Please try again.")
+      setErrorMsg(err instanceof Error ? err.message : "Failed to send. Please try again.")
     }
   }
 
   return (
-    <div className="border-t border-white/10 mt-16 pt-16" id="sell-form">
-      <h2 className="text-3xl md:text-4xl font-bold mb-3 text-center">
+    <div className="border-t border-black/10 mt-16 pt-16" id="sell-form">
+      <h2 className="text-3xl md:text-4xl font-bold mb-3 text-center brand-title">
         Sell Your Equipment
       </h2>
-      <p className="text-white/60 text-center mb-10">
+      <p className="brand-pink text-center mb-10">
         Fill in the form below and our team will get back to you with a quote.
       </p>
 
       {state === "success" ? (
-        <div className="max-w-xl mx-auto text-center bg-white/5 border border-white/10 rounded-xl px-8 py-12">
+        <div className="max-w-xl mx-auto text-center bg-white border border-black/15 rounded-xl px-8 py-12">
           <div className="text-4xl mb-4">✅</div>
           <h3 className="text-xl font-semibold mb-2">Enquiry Received</h3>
-          <p className="text-white/60">
+          <p className="text-black/65">
             Thank you — our team will review your details and be in touch shortly.
           </p>
         </div>
       ) : (
-        <form onSubmit={handleSubmit} className="max-w-2xl mx-auto flex flex-col gap-8">
+        <form onSubmit={handleSubmit} className="max-w-3xl mx-auto flex flex-col gap-9">
 
           {/* ── Equipment Details ── */}
-          <div className="flex flex-col gap-5">
-            <p className="text-white/40 text-xs uppercase tracking-[3px]">Equipment Details</p>
+          <div className="flex flex-col gap-6">
+            <p className="text-black/45 text-xs uppercase tracking-[3px]">Equipment Details</p>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
               <div className="flex flex-col gap-1.5">
                 <label htmlFor="make" className={labelClass}>
-                  Make <span className="text-white/30">*</span>
+                  Make <span className="text-black/45">*</span>
                 </label>
                 <input id="make" name="make" type="text" required
                   placeholder="e.g. Ricoh, Canon, Konica" className={inputClass} />
               </div>
               <div className="flex flex-col gap-1.5">
                 <label htmlFor="productType" className={labelClass}>
-                  Product Type <span className="text-white/30">(optional)</span>
+                  Product Type <span className="text-black/45">(optional)</span>
                 </label>
                 <input id="productType" name="productType" type="text"
                   placeholder="e.g. MFP, Printer, Scanner" className={inputClass} />
               </div>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
               <div className="flex flex-col gap-1.5">
                 <label htmlFor="model" className={labelClass}>
-                  Model <span className="text-white/30">*</span>
+                  Model <span className="text-black/45">*</span>
                 </label>
                 <input id="model" name="model" type="text" required
                   placeholder="e.g. IM C3000" className={inputClass} />
               </div>
               <div className="flex flex-col gap-1.5">
                 <label htmlFor="quantity" className={labelClass}>
-                  Quantity <span className="text-white/30">*</span>
+                  Quantity <span className="text-black/45">*</span>
                 </label>
                 <input id="quantity" name="quantity" type="number" required min={1}
                   placeholder="1" className={inputClass} />
@@ -243,10 +243,10 @@ export default function SellForm() {
             </div>
 
             {/* Dropdowns */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
               <div className="flex flex-col gap-1.5">
                 <label className={labelClass}>
-                  Condition <span className="text-white/30">*</span>
+                  Condition <span className="text-black/45">*</span>
                 </label>
                 <CustomDropdown
                   id="condition" name="condition" required
@@ -263,7 +263,7 @@ export default function SellForm() {
               </div>
               <div className="flex flex-col gap-1.5">
                 <label className={labelClass}>
-                  Status <span className="text-white/30">*</span>
+                  Status <span className="text-black/45">*</span>
                 </label>
                 <CustomDropdown
                   id="status" name="status" required
@@ -281,48 +281,48 @@ export default function SellForm() {
 
             <div className="flex flex-col gap-1.5">
               <label htmlFor="notes" className={labelClass}>
-                Additional Notes <span className="text-white/30">(optional)</span>
+                Message <span className="text-black/45">(optional)</span>
               </label>
-              <textarea id="notes" name="notes" rows={4}
+              <textarea id="notes" name="notes" rows={7}
                 placeholder="e.g. Low meter count, original packaging, collected from site..."
                 className={`${inputClass} resize-none`} />
             </div>
           </div>
 
-          <div className="border-t border-white/10" />
+          <div className="border-t border-black/10" />
 
           {/* ── Contact Details ── */}
-          <div className="flex flex-col gap-5">
-            <p className="text-white/40 text-xs uppercase tracking-[3px]">Contact Details</p>
+          <div className="flex flex-col gap-6">
+            <p className="text-black/45 text-xs uppercase tracking-[3px]">Contact Details</p>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
               <div className="flex flex-col gap-1.5">
                 <label htmlFor="name" className={labelClass}>
-                  Full Name <span className="text-white/30">*</span>
+                  Full Name <span className="text-black/45">*</span>
                 </label>
                 <input id="name" name="name" type="text" required
                   placeholder="John Smith" className={inputClass} />
               </div>
               <div className="flex flex-col gap-1.5">
                 <label htmlFor="company" className={labelClass}>
-                  Company <span className="text-white/30">(optional)</span>
+                  Company <span className="text-black/45">(optional)</span>
                 </label>
                 <input id="company" name="company" type="text"
                   placeholder="Acme Ltd" className={inputClass} />
               </div>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
               <div className="flex flex-col gap-1.5">
                 <label htmlFor="email" className={labelClass}>
-                  Email <span className="text-white/30">*</span>
+                  Email <span className="text-black/45">*</span>
                 </label>
                 <input id="email" name="email" type="email" required
                   placeholder="john@example.com" className={inputClass} />
               </div>
               <div className="flex flex-col gap-1.5">
                 <label htmlFor="phone" className={labelClass}>
-                  Phone <span className="text-white/30">*</span>
+                  Phone <span className="text-black/45">*</span>
                 </label>
                 <input id="phone" name="phone" type="tel" required
                   placeholder="07700 900000" className={inputClass} />
@@ -337,17 +337,17 @@ export default function SellForm() {
           <button
             type="submit"
             disabled={state === "loading"}
-            className="w-full bg-white text-black font-semibold py-3.5 rounded-lg
+            className="w-full brand-button py-3.5 rounded-lg
                        transition-all duration-300
-                       hover:bg-white/90 hover:shadow-[0_0_24px_rgba(255,255,255,0.12)] hover:scale-[1.01]
+                       hover:shadow-[0_0_24px_rgba(181,14,97,0.24)] hover:scale-[1.01]
                        active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed
                        text-sm tracking-wide"
           >
             {state === "loading" ? "Sending…" : "Submit Enquiry"}
           </button>
 
-          <p className="text-white/30 text-xs text-center">
-            We'll respond within 1 business day.
+          <p className="text-black/45 text-xs text-center">
+            We&apos;ll respond within 1 business day.
           </p>
         </form>
       )}

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createCategory, listCategories } from "@/lib/catalog-store";
-import { requireAdminSession } from "@/lib/session";
 import { safeReadRequestJson } from "@/lib/safe-json";
+import { getAuthenticatedProfile } from "@/lib/auth/getAuthenticatedProfile";
 
 // GET /api/category — list all categories with product count
 export async function GET() {
@@ -16,7 +16,8 @@ export async function GET() {
 
 // POST /api/category — create category
 export async function POST(req: NextRequest) {
-  if (!(await requireAdminSession())) {
+  const auth = await getAuthenticatedProfile();
+  if (auth.status !== "authenticated" || auth.role !== "admin" || !auth.onboarding_completed) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 

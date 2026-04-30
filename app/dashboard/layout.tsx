@@ -1,12 +1,25 @@
 import { Suspense } from "react";
 import { Sidebar } from "@/components/dashboard/Sidebar";
 import { Header } from "@/components/dashboard/Header";
+import { getAuthenticatedProfile } from "@/lib/auth/getAuthenticatedProfile";
+import { redirect } from "next/navigation";
 
-export default function Layout({
+export default async function Layout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  const auth = await getAuthenticatedProfile();
+  if (auth.status !== "authenticated") redirect("/signin?from=%2Fdashboard");
+
+  if (!auth.onboarding_completed) {
+    redirect("/onboarding");
+  }
+
+  if (auth.role !== "admin") {
+    redirect("/products");
+  }
+
   return (
     <div className="flex h-screen bg-[#0f0f11] overflow-hidden">
       <Suspense

@@ -5,6 +5,11 @@ export interface SessionData {
   isLoggedIn: boolean;
   email?: string;
   userId?: string;
+
+  // Supabase tokens for server-side session verification.
+  // Authorization decisions must ALWAYS be made from `public.profiles`.
+  supabaseAccessToken?: string;
+  supabaseRefreshToken?: string;
 }
 
 export type AuthenticatedSession = IronSession<
@@ -25,16 +30,17 @@ export const sessionOptions = {
   },
 };
 
-export async function getSession() {
-  return getIronSession<SessionData>(await cookies(), sessionOptions);
+export function getSessionOptions(rememberMe: boolean) {
+  return {
+    ...sessionOptions,
+    cookieOptions: {
+      ...sessionOptions.cookieOptions,
+      // If "remember me" is disabled, use a session cookie (no maxAge).
+      maxAge: rememberMe ? sessionOptions.cookieOptions.maxAge : undefined,
+    },
+  };
 }
 
-export async function requireAdminSession(): Promise<AuthenticatedSession | null> {
-  const session = await getSession();
-
-  if (!session.isLoggedIn || !session.email || !session.userId) {
-    return null;
-  }
-
-  return session as AuthenticatedSession;
+export async function getSession() {
+  return getIronSession<SessionData>(await cookies(), sessionOptions);
 }

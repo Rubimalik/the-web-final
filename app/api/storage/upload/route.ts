@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { requireAdminSession } from "@/lib/session";
 import { deleteProductImages, uploadProductImages } from "@/lib/supabase-storage";
 import { safeReadRequestJson } from "@/lib/safe-json";
+import { getAuthenticatedProfile } from "@/lib/auth/getAuthenticatedProfile";
 
 const MAX_FILES = 8;
 const MAX_IMAGE_SIZE_BYTES = 8 * 1024 * 1024;
@@ -12,7 +12,8 @@ function isAllowedImageFile(file: File) {
 
 export async function POST(req: NextRequest) {
   try {
-    if (!(await requireAdminSession())) {
+    const auth = await getAuthenticatedProfile();
+    if (auth.status !== "authenticated" || auth.role !== "admin" || !auth.onboarding_completed) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
@@ -69,7 +70,8 @@ export async function POST(req: NextRequest) {
 
 export async function DELETE(req: NextRequest) {
   try {
-    if (!(await requireAdminSession())) {
+    const auth = await getAuthenticatedProfile();
+    if (auth.status !== "authenticated" || auth.role !== "admin" || !auth.onboarding_completed) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 

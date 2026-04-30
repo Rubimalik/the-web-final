@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getDashboardNotificationSummary } from "@/lib/catalog-store";
-import { requireAdminSession } from "@/lib/session";
+import { getAuthenticatedProfile } from "@/lib/auth/getAuthenticatedProfile";
 
 type NotificationTone = "neutral" | "warning" | "accent";
 
@@ -17,7 +17,8 @@ function formatProductLabel(count: number, singular: string, plural: string) {
 }
 
 export async function GET() {
-  if (!(await requireAdminSession())) {
+  const auth = await getAuthenticatedProfile();
+  if (auth.status !== "authenticated" || auth.role !== "admin" || !auth.onboarding_completed) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 

@@ -7,6 +7,7 @@ import { HeicImage } from "@/components/HeicImage";
 import NavBar from "@/components/Navbar";
 import { getProductImagePlaceholderUrl } from "@/lib/product-image-placeholder";
 import { safeReadJsonResponse } from "@/lib/safe-json";
+import { useCart } from "@/components/CartProvider";
 
 interface ProductImage { id: number; url: string; isPrimary: boolean; }
 interface Category { id: number; name: string; slug: string; }
@@ -31,7 +32,7 @@ function RichText({ text }: { text: string }) {
       {parts.map((part, i) =>
         urlRegex.test(part) ? (
           <a key={i} href={part} target="_blank" rel="noopener noreferrer"
-            className="text-indigo-400 hover:text-indigo-300 underline underline-offset-2 break-all transition-colors">
+            className="text-[var(--brand-cyan)] hover:text-[var(--brand-cyan)] underline underline-offset-2 break-all transition-colors">
             {part}
           </a>
         ) : (
@@ -50,6 +51,7 @@ export default function ProductDetailPage() {
   const [error, setError] = useState("");
   const [activeImg, setActiveImg] = useState(0);
   const [lightbox, setLightbox] = useState(false);
+  const { addToCart } = useCart();
 
   useEffect(() => {
     void (async () => {
@@ -87,15 +89,15 @@ export default function ProductDetailPage() {
   }, [lightbox, product]);
 
   if (loading) return (
-    <div className="min-h-screen bg-[#0a0a0d] flex items-center justify-center">
-      <Loader2 className="w-8 h-8 text-white/20 animate-spin" />
+    <div className="min-h-screen bg-white flex items-center justify-center">
+      <Loader2 className="w-8 h-8 text-black/30 animate-spin" />
     </div>
   );
 
   if (error || !product) return (
-    <div className="min-h-screen bg-[#0a0a0d] flex flex-col items-center justify-center gap-4">
-      <p className="text-white/40">{error || "Product not found"}</p>
-      <button onClick={() => router.back()} className="text-sm text-white/60 hover:text-white underline">← Go back</button>
+    <div className="min-h-screen bg-white flex flex-col items-center justify-center gap-4">
+      <p className="text-black/50">{error || "Product not found"}</p>
+      <button onClick={() => router.back()} className="text-sm text-black/70 hover:text-[var(--brand-cyan)] underline">← Go back</button>
     </div>
   );
 
@@ -103,13 +105,13 @@ export default function ProductDetailPage() {
   const currentImg = images[activeImg];
 
   return (
-    <div className="min-h-screen bg-[#0a0a0d] text-white" style={{ fontFamily: "'DM Sans', sans-serif" }}>
+    <div className="min-h-screen bg-white text-black" style={{ fontFamily: "'DM Sans', sans-serif" }}>
       <NavBar />
 
       <div className="max-w-6xl mx-auto px-4 sm:px-6 py-8 lg:py-12">
         <button
           onClick={() => router.back()}
-          className="mb-6 flex items-center gap-1.5 text-sm text-white/40 hover:text-white transition-colors"
+          className="mb-6 flex items-center gap-1.5 text-sm text-black/50 hover:text-[var(--brand-cyan)] transition-colors"
         >
           <ChevronLeft className="w-4 h-4" /> Back
         </button>
@@ -120,7 +122,7 @@ export default function ProductDetailPage() {
           <div className="space-y-3">
             {/* Main image */}
             <div
-              className="relative aspect-[4/3] rounded-2xl overflow-hidden bg-[#111115] border border-white/[0.06] cursor-zoom-in"
+              className="relative aspect-[4/3] rounded-2xl overflow-hidden bg-cyan-50 border border-black/10 cursor-zoom-in"
               onClick={() => images.length > 0 && setLightbox(true)}
             >
               {currentImg ? (
@@ -132,7 +134,7 @@ export default function ProductDetailPage() {
                 />
               ) : (
                 <div className="w-full h-full flex items-center justify-center">
-                  <ImageOff className="w-12 h-12 text-white/10" />
+                  <ImageOff className="w-12 h-12 text-black/20" />
                 </div>
               )}
 
@@ -140,21 +142,21 @@ export default function ProductDetailPage() {
               {images.length > 1 && (
                 <>
                   <button onClick={(e) => { e.stopPropagation(); setActiveImg((i) => (i - 1 + images.length) % images.length); }}
-                    className="absolute left-3 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-black/50 backdrop-blur-sm border border-white/10 flex items-center justify-center hover:bg-black/70 transition-all">
-                    <ChevronLeft className="w-4 h-4 text-white" />
+                    className="absolute left-3 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-white/90 border border-black/15 flex items-center justify-center hover:border-[var(--brand-cyan)] transition-all">
+                    <ChevronLeft className="w-4 h-4 text-black" />
                   </button>
                   <button onClick={(e) => { e.stopPropagation(); setActiveImg((i) => (i + 1) % images.length); }}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-black/50 backdrop-blur-sm border border-white/10 flex items-center justify-center hover:bg-black/70 transition-all">
-                    <ChevronRight className="w-4 h-4 text-white" />
+                    className="absolute right-3 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-white/90 border border-black/15 flex items-center justify-center hover:border-[var(--brand-cyan)] transition-all">
+                    <ChevronRight className="w-4 h-4 text-black" />
                   </button>
-                  <div className="absolute bottom-3 left-1/2 -translate-x-1/2 bg-black/60 backdrop-blur-sm text-white/60 text-xs px-2.5 py-1 rounded-full border border-white/10">
+                  <div className="absolute bottom-3 left-1/2 -translate-x-1/2 bg-white/90 text-black/65 text-xs px-2.5 py-1 rounded-full border border-black/10">
                     {activeImg + 1} / {images.length}
                   </div>
                 </>
               )}
 
               {product.images.length > 0 && (
-                <div className="absolute top-3 right-3 bg-black/50 backdrop-blur-sm text-white/50 text-[10px] px-2 py-1 rounded-lg border border-white/10">
+                <div className="absolute top-3 right-3 bg-white/90 text-black/55 text-[10px] px-2 py-1 rounded-lg border border-black/10">
                   Click to expand
                 </div>
               )}
@@ -165,7 +167,7 @@ export default function ProductDetailPage() {
               <div className="flex gap-2 overflow-x-auto pb-1">
                 {images.map((img, i) => (
                   <button key={img.id} onClick={() => setActiveImg(i)}
-                    className={`relative shrink-0 w-16 h-16 rounded-xl overflow-hidden border-2 transition-all ${i === activeImg ? "border-white/60" : "border-transparent hover:border-white/20"
+                    className={`relative shrink-0 w-16 h-16 rounded-xl overflow-hidden border-2 transition-all ${i === activeImg ? "border-[var(--brand-cyan)]" : "border-transparent hover:border-black/20"
                       }`}>
                     <HeicImage src={img.url} alt={`Photo ${i + 1}`} className="w-full h-full object-cover" />
                   </button>
@@ -180,7 +182,7 @@ export default function ProductDetailPage() {
             {/* Category badge */}
             {product.category && (
               <div className="inline-flex">
-                <span className="text-xs font-medium text-white/50 bg-white/[0.06] border border-white/[0.08] px-3 py-1 rounded-full">
+                <span className="text-xs font-medium text-black/75 bg-cyan-50 border border-[var(--brand-cyan)]/40 px-3 py-1 rounded-full">
                   {product.category.name}
                 </span>
               </div>
@@ -188,51 +190,65 @@ export default function ProductDetailPage() {
 
             {/* Name + price */}
             <div>
-              <h1 className="text-2xl sm:text-3xl font-bold text-white leading-tight">{product.name}</h1>
+              <h1 className="text-2xl sm:text-3xl font-bold brand-title leading-tight">{product.name}</h1>
               <div className="mt-3">
                 {product.price != null ? (
-                  <span className="text-3xl font-bold text-white">£{Number(product.price).toFixed(2)}</span>
+                  <span className="text-3xl font-bold text-black">£{Number(product.price).toFixed(2)}</span>
                 ) : (
-                  <span className="text-xl font-semibold text-white/50">Price on application</span>
+                  <span className="text-xl font-semibold text-black/50">Price on application</span>
                 )}
               </div>
             </div>
 
             {/* Description */}
             {product.description && (
-              <div className="bg-white/[0.03] border border-white/[0.05] rounded-2xl p-5">
-                <h3 className="text-xs font-semibold text-white/40 uppercase tracking-widest mb-3">Description</h3>
-                <p className="text-sm text-white/70 leading-relaxed whitespace-pre-wrap"><RichText text={product.description} /></p>
+              <div className="brand-surface rounded-2xl p-5">
+                <h3 className="text-xs font-semibold text-black/45 uppercase tracking-widest mb-3">Description</h3>
+                <p className="text-sm text-black/75 leading-relaxed whitespace-pre-wrap"><RichText text={product.description} /></p>
               </div>
             )}
 
             {/* Product URL */}
             {product.url && (
               <a href={product.url} target="_blank" rel="noopener noreferrer"
-                className="flex items-center gap-2.5 px-5 py-3.5 bg-white/[0.03] border border-white/[0.05] rounded-2xl hover:bg-white/[0.06] transition-colors group">
-                <ExternalLink className="w-4 h-4 text-indigo-400 shrink-0" />
+                className="flex items-center gap-2.5 px-5 py-3.5 bg-white border border-black/10 rounded-2xl hover:bg-cyan-50 transition-colors group">
+                <ExternalLink className="w-4 h-4 text-[var(--brand-cyan)] shrink-0" />
                 <div className="min-w-0 flex-1">
-                  <p className="text-xs font-semibold text-white/40 uppercase tracking-widest">Product Link</p>
-                  <p className="text-sm text-indigo-400 group-hover:text-indigo-300 truncate transition-colors">{product.url}</p>
+                  <p className="text-xs font-semibold text-black/45 uppercase tracking-widest">Product Link</p>
+                  <p className="text-sm text-[var(--brand-cyan)] group-hover:text-[var(--brand-cyan)] truncate transition-colors">{product.url}</p>
                 </div>
               </a>
             )}
             {/* Meta */}
-            <div className="flex items-center gap-1.5 text-xs text-white/25">
+            <div className="flex items-center gap-1.5 text-xs text-black/35">
               <Calendar className="w-3.5 h-3.5" />
               Listed {new Date(product.createdAt).toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" })}
             </div>
 
             {/* CTA */}
             <div className="space-y-3 pt-2">
+              <button
+                type="button"
+                onClick={() =>
+                  addToCart({
+                    id: product.id,
+                    name: product.name,
+                    price: product.price,
+                    imageUrl: images[0]?.url,
+                  })
+                }
+                className="flex items-center justify-center gap-2 w-full py-3 brand-button text-sm rounded-xl active:scale-[0.98] transition-all"
+              >
+                Add to Cart
+              </button>
               <a href={`mailto:sales@buysupply.me?subject=Enquiry: ${encodeURIComponent(product.name)}&body=Hi, I'm interested in the ${encodeURIComponent(product.name)} (ID: ${product.id}). Please can you provide more information.`}
-                className="flex items-center justify-center gap-2 w-full py-3 bg-white text-black text-sm font-semibold rounded-xl hover:bg-white/90 active:scale-[0.98] transition-all">
-                <Mail className="w-4 h-4" />
+                className="flex items-center justify-center gap-2 w-full py-3 rounded-xl border border-black/20 text-black text-sm font-semibold hover:border-[var(--brand-cyan)] hover:text-[var(--brand-cyan)] active:scale-[0.98] transition-all">
+                <Mail className="w-4 h-4 brand-icon" />
                 Enquire by Email
               </a>
               <a href="tel:01753971125"
-                className="flex items-center justify-center gap-2 w-full py-3 bg-white/[0.06] border border-white/[0.08] text-white text-sm font-medium rounded-xl hover:bg-white/10 active:scale-[0.98] transition-all">
-                <PhoneCall className="w-4 h-4" />
+                className="flex items-center justify-center gap-2 w-full py-3 bg-white border border-black/10 text-black text-sm font-medium rounded-xl hover:border-[var(--brand-cyan)] active:scale-[0.98] transition-all">
+                <PhoneCall className="w-4 h-4 brand-icon" />
                 Call 01753971125
               </a>
             </div>
@@ -242,22 +258,22 @@ export default function ProductDetailPage() {
 
       {/* ── Lightbox ── */}
       {lightbox && currentImg && (
-        <div className="fixed inset-0 bg-black/95 z-50 flex items-center justify-center p-4"
+        <div className="fixed inset-0 bg-white/95 z-50 flex items-center justify-center p-4"
           onClick={() => setLightbox(false)}>
           <button onClick={() => setLightbox(false)}
-            className="absolute top-4 right-4 text-white/40 hover:text-white text-sm transition-colors">
+            className="absolute top-4 right-4 text-black/50 hover:text-[var(--brand-cyan)] text-sm transition-colors">
             ESC to close
           </button>
 
           {images.length > 1 && (
             <>
               <button onClick={(e) => { e.stopPropagation(); setActiveImg((i) => (i - 1 + images.length) % images.length); }}
-                className="absolute left-4 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-white/10 border border-white/20 flex items-center justify-center hover:bg-white/20 transition-all">
-                <ChevronLeft className="w-5 h-5 text-white" />
+                className="absolute left-4 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-white border border-black/20 flex items-center justify-center hover:border-[var(--brand-cyan)] transition-all">
+                <ChevronLeft className="w-5 h-5 text-black" />
               </button>
               <button onClick={(e) => { e.stopPropagation(); setActiveImg((i) => (i + 1) % images.length); }}
-                className="absolute right-4 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-white/10 border border-white/20 flex items-center justify-center hover:bg-white/20 transition-all">
-                <ChevronRight className="w-5 h-5 text-white" />
+                className="absolute right-4 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-white border border-black/20 flex items-center justify-center hover:border-[var(--brand-cyan)] transition-all">
+                <ChevronRight className="w-5 h-5 text-black" />
               </button>
             </>
           )}
@@ -271,7 +287,7 @@ export default function ProductDetailPage() {
             <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-1.5">
               {images.map((_, i) => (
                 <button key={i} onClick={(e) => { e.stopPropagation(); setActiveImg(i); }}
-                  className={`w-1.5 h-1.5 rounded-full transition-all ${i === activeImg ? "bg-white w-4" : "bg-white/30"}`} />
+                  className={`w-1.5 h-1.5 rounded-full transition-all ${i === activeImg ? "bg-[var(--brand-cyan)] w-4" : "bg-black/30"}`} />
               ))}
             </div>
           )}
