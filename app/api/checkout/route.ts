@@ -71,13 +71,13 @@ export async function POST(req: Request) {
     const session = await stripe.checkout.sessions.create({
       mode: "payment",
       payment_method_types: ["card"],
-      line_items: validated.data.map((item) => ({
+      line_items: validated.data!.map((item) => ({
         quantity: item.quantity,
         price_data: {
           currency: "gbp",
           unit_amount: item.unit_amount,
           product_data: {
-            name: item.name,
+            name: item.name!,
           },
         },
       })),
@@ -85,7 +85,7 @@ export async function POST(req: Request) {
       cancel_url: `${baseUrl}/cancel`,
       metadata: {
         orderId: typeof payload.orderId === "string" ? payload.orderId : "",
-        userId: auth?.user.id ?? "guest",
+        userId: auth?.user?.id ?? "guest",
       },
     });
 

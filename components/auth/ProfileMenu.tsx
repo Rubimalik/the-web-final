@@ -124,7 +124,7 @@ export default function ProfileMenu() {
             {showAvatar ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img
-                src={profile.avatar_url ?? ""}
+                src={profile?.avatar_url ?? ""}
                 alt="Profile avatar"
                 className="h-10 w-10 rounded-full object-cover"
                 onError={() => setFailedAvatarUrl(avatarUrl)}

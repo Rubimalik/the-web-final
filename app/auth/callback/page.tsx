@@ -1,13 +1,13 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { Suspense, useCallback, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import AuthLayout from "@/components/auth/AuthLayout";
 import SocialLoginButton from "@/components/auth/SocialLoginButton";
 import { createSupabaseBrowserClient } from "@/lib/supabase-browser";
 import { safeReadJsonResponse } from "@/lib/safe-json";
 
-export default function AuthCallbackPage() {
+function AuthCallbackContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -138,6 +138,14 @@ export default function AuthCallbackPage() {
         </div>
       </div>
     </AuthLayout>
+  );
+}
+
+export default function AuthCallbackPage() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <AuthCallbackContent />
+    </Suspense>
   );
 }
 

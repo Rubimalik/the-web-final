@@ -10,7 +10,7 @@ export async function GET() {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  return NextResponse.json({ email: auth.user.email });
+  return NextResponse.json({ email: auth.user?.email });
 }
 
 export async function PUT(req: NextRequest) {
@@ -57,7 +57,7 @@ export async function PUT(req: NextRequest) {
 
   const supabase = createSupabaseAnonClient();
   const { error: authError } = await supabase.auth.signInWithPassword({
-    email: auth.user.email ?? "",
+    email: auth.user?.email ?? "",
     password: normalizedCurrentPassword,
   });
 
@@ -74,7 +74,7 @@ export async function PUT(req: NextRequest) {
     password?: string;
   } = {};
 
-  if (normalizedNewEmail && normalizedNewEmail !== auth.user.email) {
+  if (normalizedNewEmail && normalizedNewEmail !== auth.user?.email) {
     updatePayload.email = normalizedNewEmail;
     updatePayload.email_confirm = true;
   }
@@ -89,7 +89,7 @@ export async function PUT(req: NextRequest) {
 
   const adminSupabase = createSupabaseServiceRoleClient();
   const { data, error } = await adminSupabase.auth.admin.updateUserById(
-    auth.user.id,
+    auth.user!.id,
     updatePayload
   );
 

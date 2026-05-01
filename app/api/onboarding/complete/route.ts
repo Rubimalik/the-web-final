@@ -15,7 +15,7 @@ export async function POST() {
     // Server-side step progression validation:
     // - Admins can always complete (bootstrapped with step=3).
     // - Regular users must reach step 2 before step 3 completion.
-    const canComplete = auth.role === "admin" || auth.onboarding_step >= 2;
+    const canComplete = auth.role === "admin" || (auth.onboarding_step ?? 0) >= 2;
     if (!canComplete) {
       return NextResponse.json(
         { error: "Please complete the previous onboarding step(s) first." },
@@ -26,7 +26,7 @@ export async function POST() {
     const { error } = await supabase
       .from("profiles")
       .update({ onboarding_step: 3 })
-      .eq("id", auth.user.id);
+      .eq("id", auth.user?.id);
 
     if (error) {
       return NextResponse.json(
@@ -35,7 +35,7 @@ export async function POST() {
       );
     }
 
-    invalidateAuthenticatedProfileCache(auth.user.id);
+    invalidateAuthenticatedProfileCache(auth.user!.id);
     return NextResponse.json({ success: true });
   } catch (err) {
     console.error("[POST /api/onboarding/complete]", err);

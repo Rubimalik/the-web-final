@@ -20,7 +20,7 @@ export default async function AccountPage() {
     redirect("/signin?from=%2Faccount");
   }
 
-  const displayName = auth.profile.full_name || auth.user.email || "Unknown user";
+  const displayName = auth.profile?.full_name || auth.user?.email || "Unknown user";
   const initials = initialsFromNameOrEmail(displayName);
 
   return (
@@ -42,10 +42,10 @@ export default async function AccountPage() {
           </div>
 
           <div className="flex items-center gap-4 mb-8">
-            {auth.profile.avatar_url ? (
+            {auth.profile?.avatar_url ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img
-                src={auth.profile.avatar_url}
+                src={auth.profile?.avatar_url}
                 alt={`${displayName} avatar`}
                 className="h-16 w-16 rounded-full object-cover border border-black/10"
               />
@@ -56,7 +56,7 @@ export default async function AccountPage() {
             )}
             <div>
               <p className="font-semibold text-base text-black/90">{displayName}</p>
-              <p className="text-sm text-black/60">{auth.user.email ?? "-"}</p>
+              <p className="text-sm text-black/60">{auth.user?.email ?? "-"}</p>
             </div>
           </div>
 

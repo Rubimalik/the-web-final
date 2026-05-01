@@ -17,13 +17,13 @@ export default async function OnboardingPage() {
   // Server-side onboarding progression:
   // - If the user is still on step 0/1, move to step 2 so they can complete onboarding.
   // This keeps the step-based server validation intact (completion still requires step=2+).
-  if (auth.onboarding_step <= 1) {
+  if ((auth.onboarding_step ?? 0) <= 1) {
     const supabase = createSupabaseServiceRoleClient();
     await supabase
       .from("profiles")
       .update({ onboarding_step: 2 })
-      .eq("id", auth.user.id);
-    invalidateAuthenticatedProfileCache(auth.user.id);
+      .eq("id", auth.user!.id);
+    invalidateAuthenticatedProfileCache(auth.user!.id);
 
     // No need to recalc; UI is unchanged and completion endpoint re-checks DB.
   }
@@ -35,7 +35,7 @@ export default async function OnboardingPage() {
       <main className="max-w-6xl mx-auto px-4 sm:px-6 py-12 sm:py-16">
         <section className="text-center max-w-3xl mx-auto mb-10 sm:mb-14">
           <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold brand-title">
-            Welcome{auth.profile.full_name ? `, ${auth.profile.full_name}` : ""}!
+            Welcome{auth.profile?.full_name ? `, ${auth.profile.full_name}` : ""}!
           </h1>
           <p className="mt-4 text-black/70 text-sm sm:text-base leading-relaxed">
             Your account is ready.{" "}
@@ -51,11 +51,11 @@ export default async function OnboardingPage() {
             <div className="mt-6 space-y-4 text-sm">
               <div className="flex items-start justify-between gap-4">
                 <span className="text-black/60">Email</span>
-                  <span className="font-semibold text-black/85">{auth.user.email ?? "-"}</span>
+                  <span className="font-semibold text-black/85">{auth.user?.email ?? "-"}</span>
               </div>
               <div className="flex items-start justify-between gap-4">
                 <span className="text-black/60">Full name</span>
-                  <span className="font-semibold text-black/85">{auth.profile.full_name ?? "-"}</span>
+                  <span className="font-semibold text-black/85">{auth.profile?.full_name ?? "-"}</span>
               </div>
               <div className="flex items-start justify-between gap-4">
                 <span className="text-black/60">Profile created</span>

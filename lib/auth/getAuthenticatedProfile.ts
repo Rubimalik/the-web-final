@@ -201,7 +201,17 @@ export async function getAuthenticatedProfile(
   // 2) Fetch corresponding public.profiles row (DB source of truth)
   const cached = profileCache.get(user.id);
   if (cached) {
-    if (cached.expiresAt > Date.now()) return cached.value;
+    if (cached.expiresAt > Date.now()) {
+      return {
+        status: "authenticated",
+        user: cached.value.user,
+        profile: cached.value.profile,
+        role: cached.value.role,
+        onboarding_step: cached.value.onboarding_step,
+        onboarding_completed: cached.value.onboarding_completed,
+        error: null,
+      };
+    }
     profileCache.delete(user.id);
   }
 

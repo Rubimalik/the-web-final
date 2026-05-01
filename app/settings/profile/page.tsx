@@ -18,12 +18,12 @@ export default async function ProfileSettingsPage() {
           <div className="space-y-4 text-sm">
             <div className="flex items-start justify-between gap-4">
               <span className="text-black/60">Name</span>
-              <span className="font-semibold text-black/85">{auth.profile.full_name ?? "-"}</span>
+              <span className="font-semibold text-black/85">{auth.profile?.full_name ?? "-"}</span>
             </div>
 
             <div className="flex items-start justify-between gap-4">
               <span className="text-black/60">Email</span>
-              <span className="font-semibold text-black/85">{auth.user.email ?? "-"}</span>
+              <span className="font-semibold text-black/85">{auth.user?.email ?? "-"}</span>
             </div>
 
             <div className="flex items-start justify-between gap-4">
@@ -33,7 +33,7 @@ export default async function ProfileSettingsPage() {
 
             <div className="flex items-start justify-between gap-4">
               <span className="text-black/60">Onboarding step</span>
-              <span className="font-semibold text-black/85">{auth.onboarding_step}</span>
+              <span className="font-semibold text-black/85">{auth.onboarding_step ?? 0}</span>
             </div>
 
             <div className="flex items-start justify-between gap-4">
