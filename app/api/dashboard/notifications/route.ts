@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getDashboardNotificationSummary } from "@/lib/catalog-store";
 import { getAuthenticatedProfile } from "@/lib/auth/getAuthenticatedProfile";
+import { isApprovedAdmin } from "@/lib/admin-auth";
 
 type NotificationTone = "neutral" | "warning" | "accent";
 
@@ -17,8 +18,8 @@ function formatProductLabel(count: number, singular: string, plural: string) {
 }
 
 export async function GET() {
-  const auth = await getAuthenticatedProfile();
-  if (auth.status !== "authenticated" || auth.role !== "admin" || !auth.onboarding_completed) {
+  const auth = await getAuthenticatedProfile({ sessionKind: "admin" });
+  if (!isApprovedAdmin(auth)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
@@ -31,7 +32,7 @@ export async function GET() {
         id: "empty-catalogue",
         title: "Your catalogue is empty",
         description: "Add the first product to start building the storefront.",
-        href: "/dashboard/products/new",
+        href: "/admin/products/new",
         tone: "accent",
       });
     } else {
@@ -40,7 +41,7 @@ export async function GET() {
           id: "draft-products",
           title: `${formatProductLabel(summary.draftProducts, "draft product", "draft products")} waiting for review`,
           description: "Open the draft list and publish or archive the items when they are ready.",
-          href: "/dashboard/products/all-products?status=draft",
+          href: "/admin/products/all-products?status=draft",
           tone: "accent",
         });
       }
@@ -54,8 +55,8 @@ export async function GET() {
             ? `Start with "${firstProduct.name}" and assign a category so the catalogue stays organised.`
             : "Assign categories before publishing more products.",
           href: firstProduct
-            ? `/dashboard/products/${firstProduct.id}`
-            : "/dashboard/products/all-products",
+            ? `/admin/products/${firstProduct.id}`
+            : "/admin/products/all-products",
           tone: "warning",
         });
       }
@@ -69,8 +70,8 @@ export async function GET() {
             ? `Upload images for "${firstProduct.name}" so the product card is ready for the storefront.`
             : "Add at least one image to the affected products.",
           href: firstProduct
-            ? `/dashboard/products/${firstProduct.id}`
-            : "/dashboard/products/all-products",
+            ? `/admin/products/${firstProduct.id}`
+            : "/admin/products/all-products",
           tone: "warning",
         });
       }

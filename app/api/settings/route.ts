@@ -3,10 +3,11 @@ import { createSupabaseAnonClient, createSupabaseServiceRoleClient } from "@/lib
 import { normalizeEmailAddress } from "@/lib/supabase-auth";
 import { safeReadRequestJson } from "@/lib/safe-json";
 import { getAuthenticatedProfile } from "@/lib/auth/getAuthenticatedProfile";
+import { isApprovedAdmin } from "@/lib/admin-auth";
 
 export async function GET() {
-  const auth = await getAuthenticatedProfile();
-  if (auth.status !== "authenticated" || auth.role !== "admin" || !auth.onboarding_completed) {
+  const auth = await getAuthenticatedProfile({ sessionKind: "admin" });
+  if (!isApprovedAdmin(auth)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
@@ -14,8 +15,8 @@ export async function GET() {
 }
 
 export async function PUT(req: NextRequest) {
-  const auth = await getAuthenticatedProfile();
-  if (auth.status !== "authenticated" || auth.role !== "admin" || !auth.onboarding_completed) {
+  const auth = await getAuthenticatedProfile({ sessionKind: "admin" });
+  if (!isApprovedAdmin(auth)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 

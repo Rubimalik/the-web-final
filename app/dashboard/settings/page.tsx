@@ -64,8 +64,11 @@ export default function SettingsPage() {
       setMessage({ type: "success", text: "Email updated successfully" });
       setEmail(newEmail);
       setCurrentPassword("");
-    } catch (err: any) {
-      setMessage({ type: "error", text: err.message });
+    } catch (err: unknown) {
+      setMessage({
+        type: "error",
+        text: err instanceof Error ? err.message : "Failed to update email",
+      });
     } finally {
       setLoading(false);
     }
@@ -108,8 +111,11 @@ export default function SettingsPage() {
       setCurrentPassword("");
       setNewPassword("");
       setConfirmPassword("");
-    } catch (err: any) {
-      setMessage({ type: "error", text: err.message });
+    } catch (err: unknown) {
+      setMessage({
+        type: "error",
+        text: err instanceof Error ? err.message : "Failed to update password",
+      });
     } finally {
       setLoading(false);
     }

@@ -14,7 +14,7 @@ type NotificationItem = {
   tone: "neutral" | "warning" | "accent";
 };
 
-const PRODUCTS_ROUTE = "/dashboard/products/all-products";
+const PRODUCTS_ROUTE = "/admin/products/all-products";
 
 function buildRoute(pathname: string, params: URLSearchParams) {
   const query = params.toString();
@@ -136,7 +136,9 @@ export function Header() {
 
     const nextSearch = searchValue.trim();
     const params = new URLSearchParams(
-      pathname.startsWith("/dashboard/products") ? searchParamsString : "",
+      pathname.startsWith("/admin/products") || pathname.startsWith("/dashboard/products")
+        ? searchParamsString
+        : "",
     );
 
     if (nextSearch) {

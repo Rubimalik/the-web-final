@@ -7,6 +7,13 @@ import { ImageUpload, type UploadedImage } from "./ImageUpload";
 import { type AdminProductCategorySlug } from "@/lib/admin-product-categories";
 import { safeReadJsonResponse } from "@/lib/safe-json";
 import {
+  PARTS_AND_TONER_BRANDS,
+  PARTS_AND_TONER_TYPES,
+  PRODUCT_MAIN_CATEGORIES,
+  getPartsLeafCategory,
+  getProductCategoryPath,
+} from "@/lib/product-taxonomy";
+import {
   Package, DollarSign, Layers, Info, AlertCircle,
   ChevronDown, CheckCircle2, Tag, Link2,
 } from "lucide-react";
@@ -16,9 +23,16 @@ type ProductFormData = {
   description: string;
   url: string;
   price: string;
+  dealerPrice: string;
+  dealerNotes: string;
+  visibility: "public" | "dealer" | "both";
   status: "draft" | "active" | "archived";
+  isFeatured: boolean;
   tags: string;
   categoryId: string;
+  mainCategory: string;
+  brand: string;
+  productType: string;
   images: UploadedImage[];
 };
 
@@ -32,6 +46,12 @@ const statuses = [
   { value: "draft", label: "Draft", desc: "Not visible to customers", dot: "bg-zinc-500" },
   { value: "active", label: "Active", desc: "Listed and available", dot: "bg-emerald-500" },
   { value: "archived", label: "Archived", desc: "Hidden from store", dot: "bg-amber-500" },
+] as const;
+
+const visibilityOptions = [
+  { value: "public", label: "Public only" },
+  { value: "dealer", label: "Dealer only" },
+  { value: "both", label: "Public + dealer" },
 ] as const;
 
 function Field({ label, required, error, hint, children }: {
@@ -119,7 +139,18 @@ export function ProductUploadForm({
     getValues,
     formState: { errors },
   } = useForm<ProductFormData>({
-    defaultValues: { status: "draft", images: [], categoryId: "" },
+    defaultValues: {
+      status: "draft",
+      isFeatured: false,
+      visibility: "public",
+      images: [],
+      categoryId: "",
+      mainCategory: "",
+      brand: "",
+      productType: "",
+      dealerPrice: "",
+      dealerNotes: "",
+    },
   });
 
   useEffect(() => {
@@ -151,11 +182,34 @@ export function ProductUploadForm({
       return;
     }
 
+    const categoryPath = getProductCategoryPath(matchedCategory.slug);
+    setValue("mainCategory", categoryPath.mainSlug || matchedCategory.slug, { shouldDirty: false, shouldValidate: true });
+    setValue("brand", categoryPath.brandSlug, { shouldDirty: false, shouldValidate: true });
+    setValue("productType", categoryPath.typeSlug, { shouldDirty: false, shouldValidate: true });
     setValue("categoryId", String(matchedCategory.id), { shouldDirty: false, shouldValidate: true });
   }, [categories, getValues, initialCategorySlug, setValue]);
 
   const descriptionValue = watch("description") || "";
   const watchedImages = watch("images") || [];
+  const mainCategory = watch("mainCategory");
+  const selectedBrand = watch("brand");
+  const selectedType = watch("productType");
+
+  useEffect(() => {
+    if (categories.length === 0 || !mainCategory) return;
+
+    const leafCategory =
+      mainCategory === "consumables" ? getPartsLeafCategory(selectedBrand, selectedType) : null;
+    const slug = mainCategory === "consumables" ? leafCategory?.slug || "" : mainCategory;
+    const matchedCategory = slug
+      ? categories.find((category) => category.slug === slug)
+      : null;
+
+    setValue("categoryId", matchedCategory ? String(matchedCategory.id) : "", {
+      shouldDirty: true,
+      shouldValidate: true,
+    });
+  }, [categories, mainCategory, selectedBrand, selectedType, setValue]);
 
   const onSubmit = async (
     data: ProductFormData,
@@ -163,6 +217,11 @@ export function ProductUploadForm({
   ) => {
     if (data.images.length === 0) {
       setSubmitError("Please upload at least one product image.");
+      return;
+    }
+
+    if (data.mainCategory === "consumables" && (!data.brand || !data.productType)) {
+      setSubmitError("Please select a brand and subcategory for consumables.");
       return;
     }
 
@@ -179,7 +238,11 @@ export function ProductUploadForm({
         description: data.description || undefined,
         url: data.url || undefined,
         price: data.price ? parseFloat(data.price) : null,
+        dealerPrice: data.dealerPrice ? parseFloat(data.dealerPrice) : null,
+        dealerNotes: data.dealerNotes?.trim() || null,
+        visibility: data.visibility || "public",
         status: submitIntent,
+        isFeatured: data.isFeatured,
         tags: data.tags || undefined,
         categoryId: data.categoryId ? parseInt(data.categoryId) : null,
         images: data.images.map((img) => ({ url: img.url, key: img.key, isPrimary: img.isPrimary })),
@@ -200,12 +263,9 @@ export function ProductUploadForm({
       }
 
       setSubmitState("success");
-      const selectedCategory = categories.find(
-        (category) => category.id === Number.parseInt(data.categoryId, 10),
-      );
-      const redirectUrl = selectedCategory
-        ? `/dashboard/products/all-products?category=${selectedCategory.slug}`
-        : "/dashboard/products/all-products";
+      const redirectUrl = data.mainCategory
+        ? `/admin/products/all-products?category=${data.mainCategory}${data.brand ? `&brand=${data.brand}` : ""}${data.productType ? `&type=${data.productType}` : ""}`
+        : "/admin/products/all-products";
       setTimeout(() => router.push(redirectUrl), 1500);
     } catch (err) {
       setSubmitState("error");
@@ -240,6 +300,10 @@ export function ProductUploadForm({
                     error={!!errors.description} {...register("description")} />
                   <span className="absolute bottom-2.5 right-3 text-[10px] text-zinc-600">{descriptionValue.length} chars</span>
                 </div>
+              </Field>
+              <Field label="Dealer Notes" hint="Private notes visible only in the dealer area" error={errors.dealerNotes?.message}>
+                <Textarea rows={4} placeholder="Dealer-only notes, stock details, or trade terms..."
+                  error={!!errors.dealerNotes} {...register("dealerNotes")} />
               </Field>
               <Field label="Product URL" hint="External link for more info about this product" error={errors.url?.message}>
                 <Input icon={Link2} placeholder="https://example.com/product-page" error={!!errors.url}
@@ -281,18 +345,69 @@ export function ProductUploadForm({
                 />
               </Field>
               <p className="text-xs text-zinc-600 mt-2">Leave empty to show &quot;Price on application&quot;</p>
+              <div className="mt-4">
+                <Field label="Dealer Price" error={errors.dealerPrice?.message}>
+                  <Input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    prefix="Â£"
+                    placeholder="0.00"
+                    error={!!errors.dealerPrice}
+                    {...register("dealerPrice", {
+                      min: { value: 0, message: "Dealer price must be positive" },
+                    })}
+                  />
+                </Field>
+                <p className="text-xs text-zinc-600 mt-2">Leave empty if dealer price matches normal pricing.</p>
+              </div>
             </div>
           </Card>
           {/* Category */}
           <Card title="Category" icon={Tag}>
-            <Field label="Category" required error={errors.categoryId?.message}>
-              <Select {...register("categoryId", { required: "Please select a category" })} error={!!errors.categoryId}>
-                <option value="">Select category...</option>
-                {categories.map((c) => (
-                  <option key={c.id} value={c.id}>{c.name}</option>
-                ))}
-              </Select>
-            </Field>
+            <div className="space-y-4">
+              <Field label="Main Category" required error={errors.mainCategory?.message}>
+                <Select {...register("mainCategory", { required: "Please select a main category" })} error={!!errors.mainCategory}>
+                  <option value="">Select category...</option>
+                  {PRODUCT_MAIN_CATEGORIES.map((category) => (
+                    <option key={category.slug} value={category.slug}>
+                      {category.slug === "photocopiers" ? "Printers" : category.label}
+                    </option>
+                  ))}
+                </Select>
+              </Field>
+
+              {mainCategory === "consumables" ? (
+                <div className="grid grid-cols-1 gap-4">
+                  <Field label="Brand" required error={errors.brand?.message}>
+                    <Select {...register("brand", { required: mainCategory === "consumables" ? "Please select a brand" : false })} error={!!errors.brand}>
+                      <option value="">Select brand...</option>
+                      {PARTS_AND_TONER_BRANDS.map((brand) => (
+                        <option key={brand.slug} value={brand.slug}>{brand.label}</option>
+                      ))}
+                    </Select>
+                  </Field>
+                  <Field label="Subcategory" required error={errors.productType?.message}>
+                    <Select {...register("productType", { required: mainCategory === "consumables" ? "Please select a subcategory" : false })} error={!!errors.productType}>
+                      <option value="">Select subcategory...</option>
+                      {PARTS_AND_TONER_TYPES.map((type) => (
+                        <option key={type.slug} value={type.slug}>{type.label}</option>
+                      ))}
+                    </Select>
+                  </Field>
+                </div>
+              ) : null}
+
+              <input
+                type="hidden"
+                {...register("categoryId", { required: "Please select a complete category" })}
+              />
+              {mainCategory === "consumables" && selectedBrand && selectedType ? (
+                <p className="rounded-lg border border-indigo-500/20 bg-indigo-500/10 px-3 py-2 text-xs text-indigo-200">
+                  Product will be listed under {PARTS_AND_TONER_BRANDS.find((brand) => brand.slug === selectedBrand)?.label} {PARTS_AND_TONER_TYPES.find((type) => type.slug === selectedType)?.label}.
+                </p>
+              ) : null}
+            </div>
             {categories.length === 0 && (
               <p className="mt-2 text-xs text-zinc-600">No categories found. Run the seed script first.</p>
             )}
@@ -306,6 +421,26 @@ export function ProductUploadForm({
                   {statuses.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
                 </Select>
               </Field>
+              <Field label="Visibility">
+                <Select {...register("visibility")}>
+                  {visibilityOptions.map((option) => (
+                    <option key={option.value} value={option.value}>{option.label}</option>
+                  ))}
+                </Select>
+              </Field>
+              <label className="flex items-start gap-3 rounded-lg border border-zinc-800/60 p-3 transition-colors hover:border-zinc-700">
+                <input
+                  type="checkbox"
+                  {...register("isFeatured")}
+                  className="mt-0.5 h-4 w-4 rounded border-zinc-700 bg-zinc-900 accent-indigo-500"
+                />
+                <span>
+                  <span className="block text-sm font-medium text-zinc-300">Show in Featured Products</span>
+                  <span className="mt-0.5 block text-xs text-zinc-600">
+                    Display this product in featured sections when it is active and public.
+                  </span>
+                </span>
+              </label>
               <div className="space-y-2">
                 {statuses.map((s) => (
                   <label key={s.value} className="flex items-start gap-3 p-3 rounded-lg border border-zinc-800/60 hover:border-zinc-700 cursor-pointer transition-colors">

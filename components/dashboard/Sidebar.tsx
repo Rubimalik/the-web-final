@@ -10,6 +10,10 @@ import {
   ChevronRight,
   ChevronLeft,
   Tag,
+  ShoppingCart,
+  Users,
+  BadgeCheck,
+  Star,
 } from "lucide-react";
 import { ADMIN_PRODUCT_CATEGORIES, getAdminProductCategoryBySlug } from "@/lib/admin-product-categories";
 
@@ -29,7 +33,7 @@ type NavItem = {
 const navItems: NavItem[] = [
   {
     label: "Overview",
-    href: "/dashboard",
+    href: "/admin/dashboard",
     icon: LayoutDashboard,
   },
   {
@@ -37,13 +41,33 @@ const navItems: NavItem[] = [
     icon: Package,
     children: ADMIN_PRODUCT_CATEGORIES.map((category) => ({
       label: category.label,
-      href: `/dashboard/products/all-products?category=${category.slug}`,
-      icon: category.slug === "consumables" ? Tag : Package,
+      href: `/admin/products/all-products?category=${category.slug}`,
+      icon: category.slug === "consumables" || category.slug.includes("-") ? Tag : Package,
     })),
   },
   {
+    label: "Orders",
+    href: "/admin/orders",
+    icon: ShoppingCart,
+  },
+  {
+    label: "Featured Products",
+    href: "/admin/featured-products",
+    icon: Star,
+  },
+  {
+    label: "Dealers",
+    href: "/admin/dealers",
+    icon: BadgeCheck,
+  },
+  {
+    label: "Users",
+    href: "/admin/users",
+    icon: Users,
+  },
+  {
     label: "Settings",
-    href: "/dashboard/settings",
+    href: "/admin/settings",
     icon: Settings,
   },
 ];
@@ -76,7 +100,9 @@ export function Sidebar() {
     return true;
   };
 
-  const isParentActive = () => pathname.startsWith("/dashboard/products");
+  const isParentActive = () =>
+    pathname.startsWith("/admin/products") ||
+    pathname.startsWith("/dashboard/products");
 
   return (
     <aside

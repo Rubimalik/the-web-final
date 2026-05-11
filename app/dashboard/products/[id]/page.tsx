@@ -11,12 +11,21 @@ import { HeicImage } from "@/components/HeicImage";
 import { ImageUpload, type UploadedImage } from "@/components/dashboard/ImageUpload";
 import Link from "next/link";
 import { safeReadJsonResponse } from "@/lib/safe-json";
+import {
+    PARTS_AND_TONER_BRANDS,
+    PARTS_AND_TONER_TYPES,
+    PRODUCT_MAIN_CATEGORIES,
+    getPartsLeafCategory,
+    getProductCategoryPath,
+} from "@/lib/product-taxonomy";
 
 interface ProductImage { id: number; url: string; isPrimary: boolean; }
 interface Category { id: number; name: string; slug: string; }
 interface Product {
     id: number; name: string; description: string | null;
-    url: string | null; price: number | null; status: string; tags: string | null;
+    url: string | null; price: number | null; dealerPrice: number | null;
+    dealerNotes: string | null; visibility: "public" | "dealer" | "both";
+    status: string; isFeatured: boolean; tags: string | null;
     categoryId: number | null; createdAt: string; updatedAt: string;
     images: ProductImage[]; category: Category | null;
 }
@@ -26,6 +35,12 @@ const STATUS_CONFIG = {
     draft: { label: "Draft", dot: "bg-zinc-400", ring: "ring-zinc-500/30", text: "text-zinc-400", bg: "bg-zinc-500/10 border-zinc-500/20" },
     archived: { label: "Archived", dot: "bg-amber-400", ring: "ring-amber-500/30", text: "text-amber-400", bg: "bg-amber-500/10 border-amber-500/20" },
 } as const;
+
+const VISIBILITY_OPTIONS = [
+    { value: "public", label: "Public only" },
+    { value: "dealer", label: "Dealer only" },
+    { value: "both", label: "Public + dealer" },
+] as const;
 
 export default function ProductEditPage() {
     const { id } = useParams<{ id: string }>();
@@ -43,18 +58,26 @@ export default function ProductEditPage() {
     const [editedImages, setEditedImages] = useState<ProductImage[]>([]);
     const [draggedImgId, setDraggedImgId] = useState<number | null>(null);
     const [dragOverImgId, setDragOverImgId] = useState<number | null>(null);
-    const categoryListHref = product?.category?.slug
-        ? `/dashboard/products/all-products?category=${product.category.slug}`
-        : "/dashboard/products/all-products";
+    const categoryListSlug = getProductCategoryPath(product?.category?.slug).mainSlug;
+    const categoryListHref = categoryListSlug
+        ? `/admin/products/all-products?category=${categoryListSlug}`
+        : "/admin/products/all-products";
 
     // Editable fields
     const [name, setName] = useState("");
     const [description, setDescription] = useState("");
     const [price, setPrice] = useState("");
+    const [dealerPrice, setDealerPrice] = useState("");
+    const [dealerNotes, setDealerNotes] = useState("");
+    const [visibility, setVisibility] = useState<"public" | "dealer" | "both">("public");
     const [status, setStatus] = useState("draft");
+    const [isFeatured, setIsFeatured] = useState(false);
     const [tags, setTags] = useState("");
     const [url, setUrl] = useState("");
     const [categoryId, setCategoryId] = useState("");
+    const [mainCategory, setMainCategory] = useState("");
+    const [brand, setBrand] = useState("");
+    const [productType, setProductType] = useState("");
 
     useEffect(() => {
         void (async () => {
@@ -82,10 +105,18 @@ export default function ProductEditPage() {
                 setName(p.name);
                 setDescription(p.description || "");
                 setPrice(p.price != null ? String(p.price) : "");
+                setDealerPrice(p.dealerPrice != null ? String(p.dealerPrice) : "");
+                setDealerNotes(p.dealerNotes || "");
+                setVisibility(p.visibility || "public");
                 setStatus(p.status);
+                setIsFeatured(Boolean(p.isFeatured));
                 setTags(p.tags || "");
                 setUrl(p.url || "");
                 setCategoryId(p.categoryId ? String(p.categoryId) : "");
+                const categoryPath = getProductCategoryPath(p.category?.slug);
+                setMainCategory(categoryPath.mainSlug);
+                setBrand(categoryPath.brandSlug);
+                setProductType(categoryPath.typeSlug);
                 setCategories(cData?.data || []);
             } catch (e) {
                 setError(e instanceof Error ? e.message : "Failed to load");
@@ -94,6 +125,19 @@ export default function ProductEditPage() {
             }
         })();
     }, [id]);
+
+    useEffect(() => {
+        if (categories.length === 0 || !mainCategory) return;
+
+        const leafCategory =
+            mainCategory === "consumables" ? getPartsLeafCategory(brand, productType) : null;
+        const slug = mainCategory === "consumables" ? leafCategory?.slug || "" : mainCategory;
+        const matchedCategory = slug
+            ? categories.find((category) => category.slug === slug)
+            : null;
+
+        setCategoryId(matchedCategory ? String(matchedCategory.id) : "");
+    }, [brand, categories, mainCategory, productType]);
 
     useEffect(() => {
         if (editedImages.length === 0 && activeImg !== 0) {
@@ -159,6 +203,10 @@ export default function ProductEditPage() {
         setSaving(true);
         setSaveState("idle");
         try {
+            if (mainCategory === "consumables" && (!brand || !productType || !categoryId)) {
+                throw new Error("Please select a brand and subcategory for consumables.");
+            }
+
             const hasPrimaryInNewImages = newImages.some((img) => img.isPrimary);
             const res = await fetch(`/api/product/${id}`, {
                 method: "PUT",
@@ -168,7 +216,11 @@ export default function ProductEditPage() {
                     description: description || null,
                     url: url || null,
                     price: price ? parseFloat(price) : null,
+                    dealerPrice: dealerPrice ? parseFloat(dealerPrice) : null,
+                    dealerNotes: dealerNotes || null,
+                    visibility,
                     status,
+                    isFeatured,
                     tags: tags || null,
                     categoryId: categoryId ? parseInt(categoryId) : null,
                     editedImages: editedImages.map((img) => ({
@@ -225,7 +277,11 @@ export default function ProductEditPage() {
         description !== (product.description || "") ||
         url !== (product.url || "") ||
         price !== (product.price != null ? String(product.price) : "") ||
+        dealerPrice !== (product.dealerPrice != null ? String(product.dealerPrice) : "") ||
+        dealerNotes !== (product.dealerNotes || "") ||
+        visibility !== product.visibility ||
         status !== product.status ||
+        isFeatured !== product.isFeatured ||
         tags !== (product.tags || "") ||
         categoryId !== (product.categoryId ? String(product.categoryId) : "") ||
         newImages.length > 0 ||
@@ -472,6 +528,32 @@ export default function ProductEditPage() {
                                 );
                             })}
                         </div>
+                        <div className="px-5 pb-5">
+                            <label className="text-sm font-medium text-zinc-300">Visibility</label>
+                            <div className="relative mt-1.5">
+                                <select value={visibility} onChange={(e) => setVisibility(e.target.value as typeof visibility)}
+                                    className="w-full appearance-none bg-zinc-900/60 border border-zinc-700/60 text-sm text-zinc-200 rounded-lg px-3 py-2.5 pr-8 focus:outline-none focus:border-indigo-500/60 focus:ring-1 focus:ring-indigo-500/20 hover:border-zinc-600 transition-all cursor-pointer">
+                                    {VISIBILITY_OPTIONS.map((option) => (
+                                        <option key={option.value} value={option.value}>{option.label}</option>
+                                    ))}
+                                </select>
+                                <ChevronLeft className="absolute right-3 top-1/2 -translate-y-1/2 -rotate-90 w-4 h-4 text-zinc-500 pointer-events-none" />
+                            </div>
+                            <label className="mt-4 flex items-start gap-3 rounded-lg border border-zinc-800/60 p-3 transition-colors hover:border-zinc-700">
+                                <input
+                                    type="checkbox"
+                                    checked={isFeatured}
+                                    onChange={(event) => setIsFeatured(event.target.checked)}
+                                    className="mt-0.5 h-4 w-4 rounded border-zinc-700 bg-zinc-900 accent-indigo-500"
+                                />
+                                <span>
+                                    <span className="block text-sm font-medium text-zinc-300">Show in Featured Products</span>
+                                    <span className="mt-0.5 block text-xs text-zinc-600">
+                                        Display this product in featured sections when it is active and public.
+                                    </span>
+                                </span>
+                            </label>
+                        </div>
                     </div>
 
                     {/* Product info */}
@@ -501,6 +583,15 @@ export default function ProductEditPage() {
                                         className="w-full bg-zinc-900/60 border border-zinc-700/60 text-sm text-zinc-200 placeholder:text-zinc-600 rounded-lg px-3 py-2.5 focus:outline-none focus:border-indigo-500/60 focus:ring-1 focus:ring-indigo-500/20 hover:border-zinc-600 transition-all resize-none" />
                                     <span className="absolute bottom-2.5 right-3 text-[10px] text-zinc-600">{description.length} chars</span>
                                 </div>
+                            </div>
+
+                            {/* Dealer Notes */}
+                            <div className="space-y-1.5">
+                                <label className="text-sm font-medium text-zinc-300">Dealer Notes</label>
+                                <textarea value={dealerNotes} onChange={(e) => setDealerNotes(e.target.value)}
+                                    rows={4}
+                                    placeholder="Dealer-only notes, stock details, or trade terms..."
+                                    className="w-full bg-zinc-900/60 border border-zinc-700/60 text-sm text-zinc-200 placeholder:text-zinc-600 rounded-lg px-3 py-2.5 focus:outline-none focus:border-indigo-500/60 focus:ring-1 focus:ring-indigo-500/20 hover:border-zinc-600 transition-all resize-none" />
                             </div>
 
                             {/* URL */}
@@ -560,6 +651,17 @@ export default function ProductEditPage() {
                                     />
                                 </div>
                                 <p className="text-xs text-zinc-600 mt-2">Leave empty for &quot;Price on application&quot;</p>
+                                <label className="block text-sm font-medium text-zinc-300 mt-4">Dealer Price</label>
+                                <div className="relative mt-1.5">
+                                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-zinc-500">Â£</span>
+                                    <input
+                                        type="number" step="0.01" min="0"
+                                        value={dealerPrice} onChange={(e) => setDealerPrice(e.target.value)}
+                                        placeholder="Dealer price"
+                                        className="w-full bg-zinc-900/60 border border-zinc-700/60 text-sm text-zinc-200 placeholder:text-zinc-600 rounded-lg pl-7 pr-3 py-2.5 focus:outline-none focus:border-indigo-500/60 focus:ring-1 focus:ring-indigo-500/20 hover:border-zinc-600 transition-all"
+                                    />
+                                </div>
+                                <p className="text-xs text-zinc-600 mt-2">Dealer price is only returned from dealer/admin APIs.</p>
                             </div>
                         </div>
                         {/* Category */}
@@ -571,15 +673,57 @@ export default function ProductEditPage() {
                                 <h2 className="text-sm font-semibold text-zinc-200">Category</h2>
                             </div>
                             <div className="p-5">
-                                <div className="relative">
-                                    <select value={categoryId} onChange={(e) => setCategoryId(e.target.value)}
-                                        className="w-full appearance-none bg-zinc-900/60 border border-zinc-700/60 text-sm text-zinc-200 rounded-lg px-3 py-2.5 pr-8 focus:outline-none focus:border-indigo-500/60 focus:ring-1 focus:ring-indigo-500/20 hover:border-zinc-600 transition-all cursor-pointer">
-                                        <option value="">Uncategorised</option>
-                                        {categories.map((c) => (
-                                            <option key={c.id} value={c.id}>{c.name}</option>
-                                        ))}
-                                    </select>
-                                    <ChevronLeft className="absolute right-3 top-1/2 -translate-y-1/2 -rotate-90 w-4 h-4 text-zinc-500 pointer-events-none" />
+                                <div className="space-y-4">
+                                    <label className="block">
+                                        <span className="mb-1.5 block text-sm font-medium text-zinc-300">Main Category</span>
+                                        <div className="relative">
+                                            <select value={mainCategory} onChange={(e) => {
+                                                setMainCategory(e.target.value);
+                                                setBrand("");
+                                                setProductType("");
+                                            }}
+                                                className="w-full appearance-none bg-zinc-900/60 border border-zinc-700/60 text-sm text-zinc-200 rounded-lg px-3 py-2.5 pr-8 focus:outline-none focus:border-indigo-500/60 focus:ring-1 focus:ring-indigo-500/20 hover:border-zinc-600 transition-all cursor-pointer">
+                                                <option value="">Uncategorised</option>
+                                                {PRODUCT_MAIN_CATEGORIES.map((category) => (
+                                                    <option key={category.slug} value={category.slug}>
+                                                        {category.slug === "photocopiers" ? "Printers" : category.label}
+                                                    </option>
+                                                ))}
+                                            </select>
+                                            <ChevronLeft className="absolute right-3 top-1/2 -translate-y-1/2 -rotate-90 w-4 h-4 text-zinc-500 pointer-events-none" />
+                                        </div>
+                                    </label>
+
+                                    {mainCategory === "consumables" ? (
+                                        <div className="grid grid-cols-1 gap-4">
+                                            <label className="block">
+                                                <span className="mb-1.5 block text-sm font-medium text-zinc-300">Brand</span>
+                                                <select value={brand} onChange={(e) => setBrand(e.target.value)}
+                                                    className="w-full appearance-none bg-zinc-900/60 border border-zinc-700/60 text-sm text-zinc-200 rounded-lg px-3 py-2.5 focus:outline-none focus:border-indigo-500/60 focus:ring-1 focus:ring-indigo-500/20 hover:border-zinc-600 transition-all cursor-pointer">
+                                                    <option value="">Select brand...</option>
+                                                    {PARTS_AND_TONER_BRANDS.map((option) => (
+                                                        <option key={option.slug} value={option.slug}>{option.label}</option>
+                                                    ))}
+                                                </select>
+                                            </label>
+                                            <label className="block">
+                                                <span className="mb-1.5 block text-sm font-medium text-zinc-300">Subcategory</span>
+                                                <select value={productType} onChange={(e) => setProductType(e.target.value)}
+                                                    className="w-full appearance-none bg-zinc-900/60 border border-zinc-700/60 text-sm text-zinc-200 rounded-lg px-3 py-2.5 focus:outline-none focus:border-indigo-500/60 focus:ring-1 focus:ring-indigo-500/20 hover:border-zinc-600 transition-all cursor-pointer">
+                                                    <option value="">Select subcategory...</option>
+                                                    {PARTS_AND_TONER_TYPES.map((option) => (
+                                                        <option key={option.slug} value={option.slug}>{option.label}</option>
+                                                    ))}
+                                                </select>
+                                            </label>
+                                        </div>
+                                    ) : null}
+
+                                    {mainCategory === "consumables" && brand && productType ? (
+                                        <p className="rounded-lg border border-indigo-500/20 bg-indigo-500/10 px-3 py-2 text-xs text-indigo-200">
+                                            Product will be listed under {PARTS_AND_TONER_BRANDS.find((option) => option.slug === brand)?.label} {PARTS_AND_TONER_TYPES.find((option) => option.slug === productType)?.label}.
+                                        </p>
+                                    ) : null}
                                 </div>
                             </div>
                         </div>
@@ -594,8 +738,17 @@ export default function ProductEditPage() {
                                     setName(product.name); setDescription(product.description || "");
                                     setUrl(product.url || "");
                                     setPrice(product.price != null ? String(product.price) : "");
-                                    setStatus(product.status); setTags(product.tags || "");
+                                    setDealerPrice(product.dealerPrice != null ? String(product.dealerPrice) : "");
+                                    setDealerNotes(product.dealerNotes || "");
+                                    setVisibility(product.visibility || "public");
+                                    setStatus(product.status);
+                                    setIsFeatured(Boolean(product.isFeatured));
+                                    setTags(product.tags || "");
                                     setCategoryId(product.categoryId ? String(product.categoryId) : "");
+                                    const categoryPath = getProductCategoryPath(product.category?.slug);
+                                    setMainCategory(categoryPath.mainSlug);
+                                    setBrand(categoryPath.brandSlug);
+                                    setProductType(categoryPath.typeSlug);
                                     setNewImages([]);
                                     setEditedImages(product.images);
                                 }} className="px-3 py-2 text-xs text-zinc-400 border border-zinc-700 hover:border-zinc-500 rounded-lg transition-all">

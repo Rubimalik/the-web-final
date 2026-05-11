@@ -2,6 +2,7 @@ import Link from "next/link";
 import { ArrowRight, Package } from "lucide-react";
 import { getDashboardOverview } from "@/lib/catalog-store";
 import { getProductImagePlaceholderUrl } from "@/lib/product-image-placeholder";
+import { getAdminDashboardStats } from "@/lib/admin-store";
 
 export const dynamic = "force-dynamic";
 
@@ -12,19 +13,19 @@ const STATUS_STYLES = {
 } as const;
 
 export default async function DashboardPage() {
-  const {
-    totalProducts,
-    activeProducts,
-    draftProducts,
-    totalCategories,
-    recentProducts,
-  } = await getDashboardOverview();
+  const catalogue = await getDashboardOverview();
+  const adminStats = await getAdminDashboardStats(catalogue);
+  const { recentProducts } = catalogue;
 
   const stats = [
-    { label: "Total Products", value: totalProducts, tone: "text-white" },
-    { label: "Active", value: activeProducts, tone: "text-emerald-400" },
-    { label: "Draft", value: draftProducts, tone: "text-zinc-300" },
-    { label: "Categories", value: totalCategories, tone: "text-indigo-300" },
+    { label: "Products", value: adminStats.products.total, tone: "text-white" },
+    { label: "Active", value: adminStats.products.active, tone: "text-emerald-400" },
+    { label: "Orders", value: adminStats.orders.total, tone: "text-sky-300" },
+    { label: "Pending Orders", value: adminStats.orders.pending, tone: "text-amber-300" },
+    { label: "Users", value: adminStats.users.total, tone: "text-indigo-300" },
+    { label: "Dealers", value: adminStats.users.dealers, tone: "text-violet-300" },
+    { label: "Drafts", value: adminStats.products.draft, tone: "text-zinc-300" },
+    { label: "Categories", value: adminStats.products.categories, tone: "text-indigo-300" },
   ];
 
   return (
@@ -33,7 +34,7 @@ export default async function DashboardPage() {
         <div>
           <h1 className="text-2xl font-semibold text-white tracking-tight">Overview</h1>
           <p className="text-zinc-500 text-sm mt-1">
-            Quick view of your catalogue and the latest product updates.
+            Quick view of catalogue, orders, users, and dealer approvals.
           </p>
         </div>
       </div>
@@ -78,7 +79,7 @@ export default async function DashboardPage() {
                 return (
                   <Link
                     key={product.id}
-                    href={`/dashboard/products/${product.id}`}
+                    href={`/admin/products/${product.id}`}
                     className="flex items-center gap-4 px-5 py-4 hover:bg-zinc-900/30 transition-colors"
                   >
                     <div className="w-14 h-14 rounded-xl overflow-hidden border border-zinc-800 bg-zinc-900 shrink-0 flex items-center justify-center">

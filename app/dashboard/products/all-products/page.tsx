@@ -11,6 +11,13 @@ import {
 import { getAdminProductCategoryBySlug } from "@/lib/admin-product-categories";
 import { getProductImagePlaceholderUrl } from "@/lib/product-image-placeholder";
 import { safeReadJsonResponse } from "@/lib/safe-json";
+import {
+  PARTS_AND_TONER_BRANDS,
+  PARTS_AND_TONER_TYPES,
+  getConsumableGroupBySlug,
+  getPartsBrandBySlug,
+  getPartsTypeBySlug,
+} from "@/lib/product-taxonomy";
 
 interface ProductImage {
   id: number;
@@ -28,6 +35,7 @@ interface Product {
   tags: string | null;
   createdAt: string;
   images: ProductImage[];
+  category: { id: number; name: string; slug: string } | null;
 }
 
 interface Pagination {
@@ -60,10 +68,17 @@ function AllProductsPageContent() {
   const activeCategory = getAdminProductCategoryBySlug(searchParams.get("category"));
   const querySearch = searchParams.get("search") ?? "";
   const queryStatus = searchParams.get("status") ?? "";
+  const queryBrand = searchParams.get("brand") ?? "";
+  const queryType = searchParams.get("type") ?? "";
   const queryPage = Math.max(1, Number.parseInt(searchParams.get("page") || "1", 10) || 1);
+  const activeConsumableGroup = getConsumableGroupBySlug(queryType);
+  const activeType = activeConsumableGroup ? null : getPartsTypeBySlug(queryType);
+  const activeBrand = getPartsBrandBySlug(queryBrand);
   const [searchInput, setSearchInput] = useState(querySearch);
   const [debouncedSearch, setDebouncedSearch] = useState(querySearch);
   const [statusFilter, setStatusFilter] = useState(queryStatus);
+  const [brandFilter, setBrandFilter] = useState(activeBrand?.slug ?? "");
+  const [typeFilter, setTypeFilter] = useState(activeConsumableGroup?.slug ?? activeType?.slug ?? "");
   const [page, setPage] = useState(queryPage);
   const [deletingId, setDeletingId] = useState<number | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState<Product | null>(null);
@@ -71,6 +86,8 @@ function AllProductsPageContent() {
   const updateQueryParams = useCallback((updates: {
     search?: string;
     status?: string;
+    brand?: string;
+    type?: string;
     page?: number;
   }) => {
     const params = new URLSearchParams(searchParamsString);
@@ -93,6 +110,18 @@ function AllProductsPageContent() {
       }
     }
 
+    if ("brand" in updates) {
+      const nextBrand = updates.brand?.trim() ?? "";
+      if (nextBrand) params.set("brand", nextBrand);
+      else params.delete("brand");
+    }
+
+    if ("type" in updates) {
+      const nextType = updates.type?.trim() ?? "";
+      if (nextType) params.set("type", nextType);
+      else params.delete("type");
+    }
+
     if ("page" in updates) {
       if ((updates.page ?? 1) > 1) {
         params.set("page", String(updates.page));
@@ -111,7 +140,13 @@ function AllProductsPageContent() {
       const params = new URLSearchParams({ page: String(page), limit: "12" });
       if (debouncedSearch) params.set("search", debouncedSearch);
       if (statusFilter) params.set("status", statusFilter);
-      if (activeCategory?.slug) params.set("slug", activeCategory.slug);
+      if (activeCategory?.slug === "consumables") {
+        if (brandFilter) params.set("consumableBrand", brandFilter);
+        if (typeFilter) params.set("consumableType", typeFilter);
+        else params.set("consumableGroup", "all");
+      } else if (activeCategory?.slug) {
+        params.set("slug", activeCategory.slug);
+      }
 
       const res = await fetch(`/api/product?${params}`);
       const data = await safeReadJsonResponse<{
@@ -127,7 +162,7 @@ function AllProductsPageContent() {
     } finally {
       setLoading(false);
     }
-  }, [activeCategory?.slug, debouncedSearch, page, statusFilter]);
+  }, [activeCategory?.slug, brandFilter, debouncedSearch, page, statusFilter, typeFilter]);
 
   useEffect(() => { fetchProducts(); }, [fetchProducts]);
 
@@ -139,6 +174,14 @@ function AllProductsPageContent() {
   useEffect(() => {
     setStatusFilter(queryStatus);
   }, [queryStatus]);
+
+  useEffect(() => {
+    setBrandFilter(activeBrand?.slug ?? "");
+  }, [activeBrand?.slug]);
+
+  useEffect(() => {
+    setTypeFilter(activeConsumableGroup?.slug ?? activeType?.slug ?? "");
+  }, [activeType?.slug, activeConsumableGroup?.slug]);
 
   useEffect(() => {
     setPage(queryPage);
@@ -179,6 +222,25 @@ function AllProductsPageContent() {
     updateQueryParams({ status: nextStatus, page: 1 });
   };
 
+  const handleTypeChange = (nextType: string) => {
+    setTypeFilter(nextType);
+    setPage(1);
+    updateQueryParams({ type: nextType, page: 1 });
+  };
+
+  const handleBrandChange = (nextBrand: string) => {
+    setBrandFilter(nextBrand);
+    setPage(1);
+    updateQueryParams({ brand: nextBrand, page: 1 });
+  };
+
+  const clearConsumableFilters = () => {
+    setTypeFilter("");
+    setBrandFilter("");
+    setPage(1);
+    updateQueryParams({ brand: "", type: "", page: 1 });
+  };
+
   const handlePageChange = (nextPage: number) => {
     setPage(nextPage);
     updateQueryParams({ page: nextPage });
@@ -188,8 +250,8 @@ function AllProductsPageContent() {
   const totalDraft = products.filter((p) => p.status === "draft").length;
   const totalArchived = products.filter((p) => p.status === "archived").length;
   const addProductHref = activeCategory
-    ? `/dashboard/products/new?category=${activeCategory.slug}`
-    : "/dashboard/products/new";
+    ? `/admin/products/new?category=${activeCategory.slug}`
+    : "/admin/products/new";
   const pageTitle = activeCategory ? activeCategory.label : "All Products";
   const pageDescription = activeCategory
     ? `${pagination ? pagination.total : 0} products in ${activeCategory.label.toLowerCase()}`
@@ -243,7 +305,8 @@ function AllProductsPageContent() {
       )}
 
       {/* ── Filters ── */}
-      <div className="flex flex-col sm:flex-row gap-3">
+      <div className="flex flex-col gap-3">
+        <div className="flex flex-col sm:flex-row gap-3">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" />
           <input
@@ -266,6 +329,48 @@ function AllProductsPageContent() {
             <option value="archived">Archived</option>
           </select>
         </div>
+        </div>
+        {activeCategory?.slug === "consumables" ? (
+          <div className="flex flex-col gap-3 rounded-2xl border border-zinc-800/70 bg-[#13131a] p-4 lg:flex-row lg:items-center">
+            <div className="grid flex-1 grid-cols-1 gap-3 sm:grid-cols-2">
+              <label className="space-y-1.5">
+                <span className="text-xs font-semibold uppercase tracking-wide text-zinc-500">Brand</span>
+                <select
+                  value={brandFilter}
+                  onChange={(event) => handleBrandChange(event.target.value)}
+                  className="w-full rounded-lg border border-zinc-700/60 bg-zinc-900/60 px-3 py-2.5 text-sm text-zinc-200 outline-none transition focus:border-indigo-500/60"
+                >
+                  <option value="">All Brands</option>
+                  {PARTS_AND_TONER_BRANDS.map((brand) => (
+                    <option key={brand.slug} value={brand.slug}>{brand.label}</option>
+                  ))}
+                </select>
+              </label>
+              <label className="space-y-1.5">
+                <span className="text-xs font-semibold uppercase tracking-wide text-zinc-500">Consumable Subcategory</span>
+                <select
+                  value={typeFilter}
+                  onChange={(event) => handleTypeChange(event.target.value)}
+                  className="w-full rounded-lg border border-zinc-700/60 bg-zinc-900/60 px-3 py-2.5 text-sm text-zinc-200 outline-none transition focus:border-indigo-500/60"
+                >
+                  <option value="">All Product Types</option>
+                  {PARTS_AND_TONER_TYPES.map((type) => (
+                    <option key={type.slug} value={type.slug}>{type.label}</option>
+                  ))}
+                </select>
+              </label>
+            </div>
+            {brandFilter || typeFilter ? (
+              <button
+                type="button"
+                onClick={clearConsumableFilters}
+                className="rounded-lg border border-zinc-700 px-4 py-2.5 text-sm font-semibold text-zinc-300 transition hover:border-indigo-500/60 hover:text-white"
+              >
+                Clear Filters
+              </button>
+            ) : null}
+          </div>
+        ) : null}
       </div>
 
       {/* ── Error ── */}
@@ -300,10 +405,10 @@ function AllProductsPageContent() {
           <div>
             <p className="text-base font-medium text-zinc-300">No products found</p>
             <p className="text-sm text-zinc-600 mt-1">
-              {searchInput || statusFilter ? "Try adjusting your filters" : "Start by adding your first product"}
+              {searchInput || statusFilter || brandFilter || typeFilter ? "Try adjusting your filters" : "Start by adding your first product"}
             </p>
           </div>
-          {!searchInput && !statusFilter && (
+          {!searchInput && !statusFilter && !brandFilter && !typeFilter && (
             <Link
               href={addProductHref}
               className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-medium rounded-lg transition-all"
@@ -355,7 +460,7 @@ function AllProductsPageContent() {
                   {/* Hover actions overlay */}
                   <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
                     <Link
-                      href={`/dashboard/products/${product.id}`}
+                      href={`/admin/products/${product.id}`}
                       className="w-9 h-9 rounded-xl bg-white/10 backdrop-blur-sm border border-white/20 flex items-center justify-center text-white hover:bg-white/20 transition-all"
                     >
                       <Eye className="w-4 h-4" />
