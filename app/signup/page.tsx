@@ -4,7 +4,6 @@ import { Suspense, useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Loader2 } from "lucide-react";
-import type { AuthError } from "@supabase/supabase-js";
 import AuthLayout from "@/components/auth/AuthLayout";
 import AuthForm from "@/components/auth/AuthForm";
 import PasswordInput from "@/components/auth/PasswordInput";
@@ -41,7 +40,7 @@ function SignUpContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  const from = searchParams.get("from") || "/onboarding";
+  const from = searchParams.get("from") || "/products";
 
   const [supabaseClient, setSupabaseClient] = useState<ReturnType<
     typeof createSupabaseBrowserClient
@@ -83,42 +82,14 @@ function SignUpContent() {
 
   type ExchangeProfile = {
     role?: string;
+    roles?: string[];
     onboarding_completed?: boolean;
   };
 
   function getRedirectPath(profile: ExchangeProfile | null | undefined, fallback: string) {
-    if (!profile) return fallback;
-    if (profile.onboarding_completed === false) return "/onboarding";
-    if (profile.role === "admin") return "/dashboard";
+    void profile;
+    void fallback;
     return "/products";
-  }
-
-  async function exchangeSessionAndRedirect(
-    sessionAccessToken: string,
-    sessionRefreshToken: string | null,
-  ) {
-    if (!supabaseClient) {
-      throw new Error("Authentication is still initializing. Please try again.");
-    }
-
-    const exchangeRes = await fetch("/api/auth/supabase-exchange", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        access_token: sessionAccessToken,
-        refresh_token: sessionRefreshToken,
-        rememberMe: true,
-      }),
-    });
-
-    const data = await safeReadJsonResponse<{
-      error?: string;
-      profile?: ExchangeProfile;
-    }>(exchangeRes, "SignUpPage exchange");
-    if (!exchangeRes.ok) throw new Error(data?.error || "Failed to finalize application session.");
-
-    const redirectTo = getRedirectPath(data?.profile, from);
-    router.replace(redirectTo);
   }
 
   async function onSubmit(e: React.FormEvent) {
@@ -151,49 +122,34 @@ function SignUpContent() {
 
     setLoading(true);
     try {
-      const res = await supabaseClient.auth.signUp({
-        email: email.trim().toLowerCase(),
-        password,
-        options: {
-          data: {
-            full_name: fullName.trim(),
-          },
-          // After email confirmation, Supabase redirects back to `/signin`
-          // (where we detect the session and exchange it for the protected-route cookie).
-          emailRedirectTo: `${window.location.origin}/signin?from=${encodeURIComponent(from)}&signup=1`,
-        },
+      const response = await fetch("/api/auth/customer/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          fullName: fullName.trim(),
+          email: email.trim().toLowerCase(),
+          password,
+          confirmPassword,
+        }),
       });
 
-      if (res.error || !res.data.user) {
-        const err = res.error as AuthError | null;
-        if (err) {
-          const msg = err.message.toLowerCase();
-          if (msg.includes("user already registered") || msg.includes("already registered")) {
-            setError("This email is already in use. Try signing in instead.");
-            return;
-          }
-          setError(err.message || "Sign up failed. Please try again.");
-          return;
-        }
+      const data = await safeReadJsonResponse<{
+        error?: string;
+        requiresVerification?: boolean;
+        profile?: ExchangeProfile;
+      }>(response, "SignUpPage customer register");
 
-        setError("Sign up failed. Please try again.");
+      if (!response.ok) {
+        setError(data?.error || "Sign up failed. Please try again.");
         return;
       }
 
-      const { data: latestSessionData, error: latestSessionError } =
-        await supabaseClient.auth.getSession();
-      if (latestSessionError) {
-        throw latestSessionError;
-      }
-      const session = latestSessionData.session ?? res.data.session;
-
-      // Email verification flow: may return user but no active session.
-      if (!session?.access_token || !session.refresh_token) {
+      if (data?.requiresVerification) {
         setSuccess("Account created. Please verify your email to activate your account.");
         return;
       }
 
-      await exchangeSessionAndRedirect(session.access_token, session.refresh_token);
+      router.replace(getRedirectPath(data?.profile, from));
     } catch (err) {
       setError(friendlyAuthError(err));
     } finally {
@@ -226,10 +182,10 @@ function SignUpContent() {
   }
 
   return (
-    <AuthLayout eyebrow="Create your account">
+    <AuthLayout eyebrow="BuySupply account">
       <AuthForm
-        title="Sign up"
-        description="Join in minutes. You'll verify your email to activate your account."
+        title="Create your account"
+        description="Sign up to start shopping and managing your orders."
         footer={
           <p className="text-sm text-black/60">
             Already have an account?{" "}
@@ -296,14 +252,14 @@ function SignUpContent() {
               error={fieldErrors.password}
             />
 
-            <div className="rounded-xl border border-black/10 bg-white/60 p-4">
-              <p className="text-sm font-semibold text-black/70 mb-3">Password requirements</p>
-              <ul className="space-y-2 text-sm">
-                <li className={rules.minLength ? "text-emerald-700" : "text-black/60"}>• At least 8 characters</li>
-                <li className={rules.hasUpper ? "text-emerald-700" : "text-black/60"}>• 1 uppercase letter (A-Z)</li>
-                <li className={rules.hasLower ? "text-emerald-700" : "text-black/60"}>• 1 lowercase letter (a-z)</li>
-                <li className={rules.hasNumber ? "text-emerald-700" : "text-black/60"}>• 1 number (0-9)</li>
-                <li className={rules.hasSymbol ? "text-emerald-700" : "text-black/60"}>• 1 symbol</li>
+            <div className="rounded-xl border border-black/10 bg-slate-50/80 p-3">
+              <p className="mb-2 text-xs font-bold uppercase tracking-wide text-black/45">Password requirements</p>
+              <ul className="grid grid-cols-1 gap-1.5 text-xs sm:grid-cols-2">
+                <li className={rules.minLength ? "text-emerald-700" : "text-black/55"}>At least 8 characters</li>
+                <li className={rules.hasUpper ? "text-emerald-700" : "text-black/55"}>1 uppercase letter</li>
+                <li className={rules.hasLower ? "text-emerald-700" : "text-black/55"}>1 lowercase letter</li>
+                <li className={rules.hasNumber ? "text-emerald-700" : "text-black/55"}>1 number</li>
+                <li className={rules.hasSymbol ? "text-emerald-700" : "text-black/55"}>1 symbol</li>
               </ul>
             </div>
 
@@ -320,7 +276,7 @@ function SignUpContent() {
           </div>
 
           <div className="space-y-2">
-            <label className="flex items-start gap-3 text-sm text-black/70 select-none">
+            <label className="flex items-start gap-3 text-sm leading-6 text-black/70 select-none">
               <input
                 type="checkbox"
                 checked={acceptTerms}
@@ -397,7 +353,7 @@ function SignUpContent() {
             )}
           </button>
 
-          <div className="text-xs text-black/45 pt-1">
+          <div className="pt-1 text-center text-xs text-black/45">
             By creating an account, you agree to our Terms & Privacy.
           </div>
         </form>

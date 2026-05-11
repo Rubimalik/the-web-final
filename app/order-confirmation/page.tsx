@@ -19,7 +19,7 @@ export default function OrderConfirmationPage() {
               Continue Shopping
             </Link>
             <Link
-              href="/about#sell-to-us"
+              href="/sell-to-us#sell-form"
               className="rounded-lg border border-black/20 px-5 py-2.5 text-sm font-semibold text-black transition hover:border-[var(--brand-cyan)] hover:text-[var(--brand-cyan)]"
             >
               Contact Team

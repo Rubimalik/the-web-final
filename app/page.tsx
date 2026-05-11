@@ -3,7 +3,6 @@ import SiteFooter from "@/components/SiteFooter";
 import FeaturedProductsSection from "@/components/FeaturedProductsSection";
 import Image from "next/image";
 import Link from "next/link";
-import { Mail, Phone } from "lucide-react";
 
 export default function Home() {
   return (
@@ -41,7 +40,7 @@ export default function Home() {
           <div className="flex flex-col sm:flex-row gap-8 sm:gap-16 items-center justify-center">
             <div className="flex flex-col items-center gap-2">
               <span className="text-black/80 text-[10px] sm:text-[14px] md:text-[16px] font-medium tracking-wider uppercase text-center">
-                Printers & Photocopiers
+                Printers
               </span>
               <Link
                 href="/products?category=photocopiers"
@@ -51,7 +50,7 @@ export default function Home() {
               >
                 <Image
                   src="/button.png"
-                  alt="Printers & Copier"
+                  alt="Printers"
                   width={85}
                   height={85}
                   sizes="(max-width: 640px) 62px, (max-width: 768px) 75px, 85px"
@@ -86,8 +85,6 @@ export default function Home() {
         </section>
       </section>
 
-      <FeaturedProductsSection />
-
       <section className="border-t border-black/10 px-4 py-14 sm:py-16">
         <div className="max-w-5xl mx-auto text-center">
           <h2 className="text-3xl md:text-4xl font-bold mb-5 brand-title">About Us</h2>
@@ -99,6 +96,8 @@ export default function Home() {
         </div>
       </section>
 
+      <FeaturedProductsSection />
+
       <section className="border-t border-black/10 px-4 pb-16 sm:pb-20 pt-14 sm:pt-16">
         <div className="max-w-5xl mx-auto">
           <h2 className="text-3xl md:text-4xl font-bold mb-5 text-center brand-title">Sell To Us</h2>
@@ -109,47 +108,18 @@ export default function Home() {
 
           <div className="mt-8 flex flex-col sm:flex-row gap-4 justify-center items-center">
             <Link
-              href="/about#sell-to-us"
+              href="/sell-to-us#sell-form"
               className="brand-button px-6 py-3 rounded-lg transition-all duration-300"
             >
               Go to Sell To Us Section
             </Link>
             <Link
-              href="#contact-home"
+              href="/contact"
               className="border border-black/25 text-black px-6 py-3 rounded-lg hover:border-[var(--brand-cyan)] hover:text-[var(--brand-cyan)] transition-all duration-300"
             >
               Contact Our Team
             </Link>
           </div>
-        </div>
-      </section>
-
-      <section id="contact-home" className="border-t border-black/10 mt-0 pt-16 pb-16 px-4 text-center">
-        <h2 className="text-3xl md:text-4xl font-bold mb-4 brand-title">Get In Touch</h2>
-        <p className="text-black/60 mb-8">
-          Ready to buy, sell, or partner with us? Contact our team today.
-        </p>
-        <div className="flex flex-col sm:flex-row items-center justify-center gap-4 sm:gap-10 max-w-5xl mx-auto">
-          <a
-            href="tel:01753971125"
-            className="flex items-center gap-3 bg-white hover:bg-cyan-50 border border-black/10 rounded-lg px-6 py-4 transition group w-full sm:w-auto"
-          >
-            <Phone className="h-6 w-6 brand-icon" />
-            <div className="text-left">
-              <p className="text-black/45 text-xs uppercase tracking-widest mb-0.5">Phone</p>
-              <p className="text-black font-semibold">01753 971125</p>
-            </div>
-          </a>
-          <a
-            href="mailto:Sales@buysupply.me"
-            className="flex items-center gap-3 bg-white hover:bg-cyan-50 border border-black/10 rounded-lg px-6 py-4 transition group w-full sm:w-auto"
-          >
-            <Mail className="h-6 w-6 brand-icon" />
-            <div className="text-left">
-              <p className="text-black/45 text-xs uppercase tracking-widest mb-0.5">Email</p>
-              <p className="text-black font-semibold">Sales@buysupply.me</p>
-            </div>
-          </a>
         </div>
       </section>
 

@@ -5,10 +5,20 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { Loader2, AlertCircle, Eye, EyeOff, ShieldCheck } from "lucide-react";
 import { safeReadJsonResponse } from "@/lib/safe-json";
 
-export default function LoginPage() {
+export default function LoginForm({
+    title = "Admin Panel",
+    subtitle = "Sign in to access the dashboard",
+  }: {
+    title?: string;
+    subtitle?: string;
+  }) {
     const router = useRouter();
     const searchParams = useSearchParams();
-    const from = searchParams.get("from") || "/dashboard";
+    const fromParam = searchParams.get("from");
+    const from =
+        fromParam?.startsWith("/admin") || fromParam?.startsWith("/dashboard")
+            ? fromParam.replace(/^\/dashboard/, "/admin")
+            : "/admin/dashboard";
 
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
@@ -22,7 +32,7 @@ export default function LoginPage() {
         setError("");
 
         try {
-            const res = await fetch("/api/auth", {
+            const res = await fetch("/api/auth/admin", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ email, password }),
@@ -60,11 +70,10 @@ export default function LoginPage() {
                     <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-indigo-600/20 border border-indigo-500/30 mb-4">
                         <ShieldCheck className="w-7 h-7 text-indigo-400" />
                     </div>
-                    <h1 className="text-2xl font-bold text-white tracking-tight">Admin Panel</h1>
-                    <p className="text-sm text-zinc-500 mt-1">Sign in to access the dashboard</p>
+                        <h1 className="text-2xl font-bold text-white tracking-tight">{title}</h1>
+                        <p className="text-sm text-zinc-500 mt-1">{subtitle}</p>
                 </div>
 
-                {/* Card */}
                 <div className="bg-[#13131a] border border-zinc-800/70 rounded-2xl p-6 shadow-2xl">
                     <form onSubmit={handleSubmit} className="space-y-4">
 

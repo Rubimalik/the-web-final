@@ -23,6 +23,10 @@ function resolvePoolConfig(): PoolConfig {
   return {
     connectionString,
     ssl: isLocalDatabase ? false : { rejectUnauthorized: false },
+    max: Number.parseInt(process.env.DB_POOL_MAX || "3", 10),
+    idleTimeoutMillis: 10_000,
+    connectionTimeoutMillis: 15_000,
+    keepAlive: true,
   };
 }
 
@@ -41,7 +45,43 @@ export async function query<T extends QueryResultRow = QueryResultRow>(
   text: string,
   params: unknown[] = [],
 ) {
-  return pool.query<T>(text, params);
+  return runWithTransientRetry(() => pool.query<T>(text, params));
+}
+
+function isTransientDbError(error: unknown) {
+  if (!(error instanceof Error)) return false;
+
+  const message = error.message.toLowerCase();
+  const code = "code" in error ? String(error.code).toLowerCase() : "";
+
+  return (
+    code === "econnreset" ||
+    code === "econnrefused" ||
+    code === "etimedout" ||
+    code === "eauthtimeout" ||
+    message.includes("eauthtimeout") ||
+    message.includes("timeout while waiting for message") ||
+    message.includes("read econnreset") ||
+    message.includes("connection terminated unexpectedly")
+  );
+}
+
+async function runWithTransientRetry<T>(operation: () => Promise<T>) {
+  const maxAttempts = 3;
+
+  for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+    try {
+      return await operation();
+    } catch (error) {
+      if (!isTransientDbError(error) || attempt === maxAttempts) {
+        throw error;
+      }
+
+      await new Promise((resolve) => setTimeout(resolve, 250 * attempt));
+    }
+  }
+
+  return operation();
 }
 
 export async function withTransaction<T>(

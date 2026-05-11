@@ -3,9 +3,9 @@ import SellForm from "@/components/Sellform";
 
 export default function SellToUsPage() {
   return (
-    <SectionPageLayout title="Sell Your Photocopiers / Printers & Unused Toners">
+    <SectionPageLayout title="Sell Your Photocopiers / Printers & Unused Toners" showFeaturedProducts>
       <h3 className="text-xl font-semibold text-white">Sell Your Used Photocopiers & Consumables UK – Fast Collection & Payment</h3>
-      <p>BuySupply is one of the UK's leading buyers of used photocopiers, printers, multifunction devices, wide format machines, and surplus consumables. If you're looking to sell your photocopier in the UK or sell toner cartridges for cash, we offer a fast, professional, and no-nonsense service.</p>
+      <p>BuySupply is one of the UK&apos;s leading buyers of used photocopiers, printers, multifunction devices, wide format machines, and surplus consumables. If you are looking to sell your photocopier in the UK or sell toner cartridges for cash, we offer a fast, professional, and no-nonsense service.</p>
       <p>We provide nationwide collection, top market prices, and fast payment, helping businesses across the UK turn surplus equipment into immediate cash.</p>
       <h3 className="text-xl font-semibold text-white">We Buy Used Photocopiers – All Brands Wanted</h3>
       <p>We purchase used photocopiers and printers across the UK every week, including all major brands:</p>
@@ -13,7 +13,7 @@ export default function SellToUsPage() {
       <p>Whether you want to sell a single copier, multiple machines, or complete an office equipment clearance, BuySupply is ready to buy immediately.</p>
 
       <h3 className="text-xl font-semibold text-white">Sell Toner Cartridges & Printer Consumables UK</h3>
-      <p>Looking to sell surplus toner cartridges, ink, or printer parts? We are one of the UK's most active buyers of consumables, with strong demand from both UK and export markets.</p>
+      <p>Looking to sell surplus toner cartridges, ink, or printer parts? We are one of the UK&apos;s most active buyers of consumables, with strong demand from both UK and export markets.</p>
       <ul className="list-disc list-inside space-y-2">
         <li>We buy new and original toner cartridges</li>
         <li>We accept large quantities and bulk stock</li>
@@ -59,3 +59,4 @@ export default function SellToUsPage() {
     </SectionPageLayout>
   );
 }
+

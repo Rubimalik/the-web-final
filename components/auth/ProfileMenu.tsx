@@ -1,35 +1,19 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useId, useMemo, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { LogOut } from "lucide-react";
+import { CircleUserRound, LogOut } from "lucide-react";
 import { createSupabaseBrowserClient } from "@/lib/supabase-browser";
 import { clearAuthState, emitAuthRefresh, useAuth } from "@/lib/auth/useAuth";
 
-function getDisplayInitials(nameOrEmail: string) {
-  const trimmed = nameOrEmail.trim();
-  if (!trimmed) return "U";
-  const words = trimmed.split(/\s+/).filter(Boolean);
-  if (words.length >= 2) {
-    return `${words[0][0] ?? ""}${words[1][0] ?? ""}`.toUpperCase();
-  }
-  return (words[0]?.slice(0, 2) ?? "U").toUpperCase();
-}
-
 export default function ProfileMenu() {
   const router = useRouter();
-  const { user, profile, role, loading } = useAuth();
+  const { user, access, loading } = useAuth();
 
   const [open, setOpen] = useState(false);
-  const [failedAvatarUrl, setFailedAvatarUrl] = useState<string | null>(null);
   const rootRef = useRef<HTMLDivElement | null>(null);
   const menuId = useId();
-
-  const displayLetter = useMemo(() => {
-    const name = profile?.full_name || user?.email || "";
-    return getDisplayInitials(String(name));
-  }, [profile?.full_name, user?.email]);
 
   useEffect(() => {
     if (!open) return;
@@ -64,25 +48,23 @@ export default function ProfileMenu() {
     };
   }, [open]);
 
-  const isAuthed = !!user;
-  const avatarUrl = profile?.avatar_url ?? null;
-  const showAvatar = !!avatarUrl && failedAvatarUrl !== avatarUrl;
+  const isAuthed = !!user && !!access?.canAccessCustomer;
 
   async function handleLogout() {
     setOpen(false);
     try {
-      await fetch("/api/auth/logout", { method: "POST", cache: "no-store" });
+      await fetch("/api/auth/customer/logout", { method: "POST", cache: "no-store" });
     } catch {
       // ignore
     }
 
     try {
-      await createSupabaseBrowserClient({ rememberMe: true }).auth.signOut({ scope: "global" });
+      await createSupabaseBrowserClient({ rememberMe: true }).auth.signOut({ scope: "local" });
     } catch {
       // ignore
     }
     try {
-      await createSupabaseBrowserClient({ rememberMe: false }).auth.signOut({ scope: "global" });
+      await createSupabaseBrowserClient({ rememberMe: false }).auth.signOut({ scope: "local" });
     } catch {
       // ignore
     }
@@ -121,17 +103,7 @@ export default function ProfileMenu() {
               }
             }}
           >
-            {showAvatar ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={profile?.avatar_url ?? ""}
-                alt="Profile avatar"
-                className="h-10 w-10 rounded-full object-cover"
-                onError={() => setFailedAvatarUrl(avatarUrl)}
-              />
-            ) : (
-              <span className="text-black/70 font-bold text-sm">{displayLetter}</span>
-            )}
+            <CircleUserRound className="h-5 w-5 text-black/70" />
           </button>
 
           {open && (
@@ -151,24 +123,13 @@ export default function ProfileMenu() {
                     My Profile
                   </Link>
 
-                  {role === "admin" && (
-                    <Link
-                      href="/dashboard"
-                      role="menuitem"
-                      className="block px-4 py-2 text-sm text-black/70 hover:text-[var(--brand-pink-hover)] hover:bg-gray-50 transition-colors"
-                      onClick={() => setOpen(false)}
-                    >
-                      Dashboard
-                    </Link>
-                  )}
-
                   <Link
-                    href="/settings/profile"
+                    href="/orders"
                     role="menuitem"
                     className="block px-4 py-2 text-sm text-black/70 hover:text-[var(--brand-pink-hover)] hover:bg-gray-50 transition-colors"
                     onClick={() => setOpen(false)}
                   >
-                    Settings
+                    My Orders
                   </Link>
 
                   <button
@@ -182,14 +143,24 @@ export default function ProfileMenu() {
                   </button>
                 </>
               ) : (
-                <Link
-                  href="/signin"
-                  role="menuitem"
-                  className="block px-4 py-2 text-sm text-black/70 hover:text-[var(--brand-pink-hover)] hover:bg-gray-50 transition-colors"
-                  onClick={() => setOpen(false)}
-                >
-                  Sign in
-                </Link>
+                <>
+                  <Link
+                    href="/signin"
+                    role="menuitem"
+                    className="block px-4 py-2 text-sm text-black/70 hover:text-[var(--brand-pink-hover)] hover:bg-gray-50 transition-colors"
+                    onClick={() => setOpen(false)}
+                  >
+                    Sign in
+                  </Link>
+                  <Link
+                    href="/signup"
+                    role="menuitem"
+                    className="block px-4 py-2 text-sm text-black/70 hover:text-[var(--brand-pink-hover)] hover:bg-gray-50 transition-colors"
+                    onClick={() => setOpen(false)}
+                  >
+                    Sign up
+                  </Link>
+                </>
               )}
             </div>
           )}

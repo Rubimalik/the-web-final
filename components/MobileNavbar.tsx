@@ -8,6 +8,7 @@ import ProfileMenu from "@/components/auth/ProfileMenu"
 
 const navLinks = [
     { label: "HOME", href: "/" },
+    { label: "ABOUT", href: "/about" },
     { label: "UK Sales", href: "/uk-sales" },
     { label: "Export Sales", href: "/export-sales" },
     { label: "Leasing", href: "/leasing" },

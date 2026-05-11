@@ -2,7 +2,7 @@ import SectionPageLayout from "@/components/SectionPageLayout";
 
 export default function LeasingPage() {
   return (
-    <SectionPageLayout title="LEASING">
+    <SectionPageLayout title="LEASING" showFeaturedProducts>
       <h2 className="text-2xl font-semibold mb-2 text-white">Lease Return Specialists for the UK Photocopier Industry</h2>
       <p>
       Buysupply is one of the leading lease return partners within the photocopier industry across the United Kingdom. We provide leasing companies with a fully managed, end-to-end solution designed to simplify the asset return process and maximise value.
@@ -32,3 +32,4 @@ export default function LeasingPage() {
     </SectionPageLayout>
   );
 }
+

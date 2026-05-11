@@ -246,7 +246,7 @@ export default function UKSalesSection() {
                     </p>
 
                     <p className="text-white/70 leading-relaxed mb-10">
-                        Over the years we've built strong partnerships with specialist transport
+                        Over the years we have built strong partnerships with specialist transport
                         companies, allowing us to organise efficient, safe collections anywhere
                         in the country.
                     </p>
@@ -285,7 +285,7 @@ export default function UKSalesSection() {
                     </ul>
 
                     <p className="text-white/70 leading-relaxed mb-10">
-                        Whether it's a single machine or multiple units, we can coordinate
+                        Whether it is a single machine or multiple units, we can coordinate
                         the collection and onward movement quickly and professionally.
                     </p>
 
@@ -301,13 +301,13 @@ export default function UKSalesSection() {
                     <ul className="list-disc list-inside text-white/70 space-y-2 mb-10">
                         <li>Your customer is moving premises and needs temporary storage</li>
                         <li>Equipment has been removed and is awaiting delivery elsewhere</li>
-                        <li>Machines need holding before export or redistribution</li>
+                        <li>Equipment needs holding before export or redistribution</li>
                         <li>You need short-term logistics support</li>
                     </ul>
 
                     <p className="text-white/70 leading-relaxed mb-10">
                         Our storage solution gives you a safe and convenient place to hold
-                        equipment until it's ready for its next destination.
+                        equipment until it is ready for its next destination.
                     </p>
 
                     <h4 className="text-xl font-semibold mb-4">
@@ -316,7 +316,7 @@ export default function UKSalesSection() {
 
                     <p className="text-white/70 leading-relaxed mb-8">
                         Our goal is to make collections, transport and storage as straightforward
-                        as possible. From the moment you contact us, we'll arrange everything needed
+                        as possible. From the moment you contact us, we will arrange everything needed
                         to ensure your equipment is handled professionally and efficiently.
                     </p>
 
@@ -338,8 +338,8 @@ export default function UKSalesSection() {
                     </h3>
 
                     <p className="text-white/70 leading-relaxed mb-6">
-                        BuySupply is one of the UK's leading buyers of used photocopiers, printers,
-                        multifunction devices, wide format machines, and surplus consumables. If you're
+                        BuySupply is one of the UK&apos;s leading buyers of used photocopiers, printers,
+                        multifunction devices, wide format machines, and surplus consumables. If you are
                         looking to sell your photocopier in the UK or sell toner cartridges for cash,
                         we offer a fast, professional, and no-nonsense service.
                     </p>
@@ -373,7 +373,7 @@ export default function UKSalesSection() {
 
                     <p className="text-white/70 leading-relaxed mb-4">
                         Looking to sell surplus toner cartridges, ink, or printer parts? We are one of the
-                        UK's most active buyers of consumables, with strong demand from both UK and export markets.
+                        UK&apos;s most active buyers of consumables, with strong demand from both UK and export markets.
                     </p>
 
                     <ul className="list-disc list-inside text-white/70 space-y-2 mb-10">

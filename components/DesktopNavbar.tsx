@@ -13,6 +13,7 @@ const navLinks = [
 ]
 
 const aboutLinks = [
+    { label: "About", href: "/about" },
     { label: "UK Sales", href: "/uk-sales" },
     { label: "Export Sales", href: "/export-sales" },
     { label: "Leasing", href: "/leasing" },
@@ -59,16 +60,14 @@ export default function DesktopNav() {
             {/* Nav Links */}
             <ul className="flex items-center gap-7 lg:gap-10 flex-1 justify-center">
 
-                {navLinks.map((link) => (
-                    <li key={link.href}>
-                        <Link
-                            href={link.href}
-                            className="text-black/75 hover:text-[var(--brand-pink-hover)] transition-colors font-bold text-base md:text-[17px]"
-                        >
-                            {link.label}
-                        </Link>
-                    </li>
-                ))}
+                <li>
+                    <Link
+                        href="/"
+                        className="text-black/75 hover:text-[var(--brand-pink-hover)] transition-colors font-bold text-base md:text-[17px]"
+                    >
+                        HOME
+                    </Link>
+                </li>
 
                 {/* ABOUT DROPDOWN (CLICK BASED) */}
                 <li className="relative" ref={dropdownRef}>
@@ -105,6 +104,17 @@ export default function DesktopNav() {
                     )}
                 </li>
 
+                {navLinks.slice(1).map((link) => (
+                    <li key={link.href}>
+                        <Link
+                            href={link.href}
+                            className="text-black/75 hover:text-[var(--brand-pink-hover)] transition-colors font-bold text-base md:text-[17px]"
+                        >
+                            {link.label}
+                        </Link>
+                    </li>
+                ))}
+
             </ul>
 
             {/* Right Side */}
@@ -114,12 +124,13 @@ export default function DesktopNav() {
                 <Link
                     href="/cart"
                     className="relative inline-flex h-10 w-10 items-center justify-center rounded-full border border-black/20 hover:border-[var(--brand-pink-hover)] hover:text-[var(--brand-pink-hover)] transition"
+                    aria-label="Open cart"
                 >
                     <ShoppingCart className="h-4 w-4" />
                     {itemCount > 0 && (
                         <span
                             key={cartPulseKey}
-                            className="absolute -right-1.5 -top-1.5 min-w-5 h-5 px-1 rounded-full bg-[var(--brand-pink-hover)] text-black text-[10px] font-bold"
+                            className="absolute -right-1.5 -top-1.5 min-w-5 h-5 px-1 rounded-full bg-[var(--brand-pink-hover)] text-black text-[10px] leading-5 font-bold text-center"
                         >
                             {itemCount}
                         </span>

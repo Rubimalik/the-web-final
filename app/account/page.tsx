@@ -2,7 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import NavBar from "@/components/Navbar";
 import SiteFooter from "@/components/SiteFooter";
-import { getAuthenticatedProfile } from "@/lib/auth/getAuthenticatedProfile";
+import { getCustomerAuth } from "@/lib/customer-auth";
 
 function initialsFromNameOrEmail(value: string) {
   const trimmed = value.trim();
@@ -15,8 +15,8 @@ function initialsFromNameOrEmail(value: string) {
 }
 
 export default async function AccountPage() {
-  const auth = await getAuthenticatedProfile();
-  if (auth.status !== "authenticated") {
+  const auth = await getCustomerAuth();
+  if (!auth) {
     redirect("/signin?from=%2Faccount");
   }
 
@@ -62,14 +62,12 @@ export default async function AccountPage() {
 
           <div className="space-y-4 text-sm">
             <div className="flex items-start justify-between gap-4">
-              <span className="text-black/60">Role</span>
-              <span className="font-semibold text-black/85 capitalize">{auth.role}</span>
+              <span className="text-black/60">Phone</span>
+              <span className="font-semibold text-black/85">{auth.profile?.phone ?? "-"}</span>
             </div>
             <div className="flex items-start justify-between gap-4">
-              <span className="text-black/60">Onboarding status</span>
-              <span className="font-semibold text-black/85">
-                {auth.onboarding_completed ? "Completed" : `Step ${auth.onboarding_step}`}
-              </span>
+              <span className="text-black/60">Address</span>
+              <span className="max-w-sm text-right font-semibold text-black/85">{auth.profile?.address ?? "-"}</span>
             </div>
           </div>
         </section>

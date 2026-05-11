@@ -2,12 +2,12 @@ import SectionPageLayout from "@/components/SectionPageLayout";
 
 export default function CollectionStoragePage() {
   return (
-    <SectionPageLayout title="Collection & Storage">
+    <SectionPageLayout title="Collection & Storage" showFeaturedProducts>
       <p>
       We provide reliable copier and printer collection services across the entire UK. Whether the equipment is located locally or further afield, we can arrange fast and professional collection through our trusted national logistics network.
       </p>
       <p>
-      Over the years we've built strong partnerships with specialist transport companies, allowing us to organise efficient, safe collections anywhere in the country.
+      Over the years we have built strong partnerships with specialist transport companies, allowing us to organise efficient, safe collections anywhere in the country.
       </p>
       <h3 className="text-xl font-semibold text-white">Specialist Equipment & Experienced Handling</h3>
       <p>
@@ -32,7 +32,7 @@ export default function CollectionStoragePage() {
         <li>Businesses relocating or upgrading equipment</li>
       </ul>
       <p>
-      Whether it's a single machine or multiple units, we can coordinate the collection and onward movement quickly and professionally.
+      Whether it is a single machine or multiple units, we can coordinate the collection and onward movement quickly and professionally.
       </p>
       <h3 className="text-xl font-semibold text-white">Secure Storage in Slough</h3>
 
@@ -43,16 +43,16 @@ export default function CollectionStoragePage() {
      <ul className="list-disc list-inside space-y-2">
        <li>Your customer is moving premises and needs temporary storage</li>
        <li>Equipment has been removed and is awaiting delivery elsewhere</li>
-       <li>Machines need holding before export or redistribution</li>
+       <li>Equipment needs holding before export or redistribution</li>
        <li>You need short-term logistics supportnt</li>
      </ul>
      <p>
-     Our storage solution gives you a safe and convenient place to hold equipment until it's ready for its next destination.
+     Our storage solution gives you a safe and convenient place to hold equipment until it is ready for its next destination.
      </p>
      <h3 className="text-xl font-semibold text-white">A Simple, Reliable Service</h3>
 
       <p>
-      Our goal is to make collections, transport and storage as straightforward as possible. From the moment you contact us, we'll arrange everything needed to ensure your equipment is handled professionally and efficiently.
+      Our goal is to make collections, transport and storage as straightforward as possible. From the moment you contact us, we will arrange everything needed to ensure your equipment is handled professionally and efficiently.
      </p>
      <p>
       If you need a copier collected, moved or stored, get in touch with our team today.
@@ -61,3 +61,4 @@ export default function CollectionStoragePage() {
     </SectionPageLayout>
   );
 }
+

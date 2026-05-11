@@ -13,7 +13,9 @@
     "images:migrate:supabase": "tsx ./scripts/migrate-product-images-to-supabase.ts",
     "start": "next start",
     "lint": "eslint",
-    "seed": "tsx ./scripts/seed-default-categories.ts"
+    "typecheck": "tsc --noEmit --incremental false",
+    "seed": "tsx ./scripts/seed-default-categories.ts",
+    "admin:ensure": "tsx ./scripts/ensure-admin.ts"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.104.0",

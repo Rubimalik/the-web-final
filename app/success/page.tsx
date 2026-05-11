@@ -1,10 +1,12 @@
 import Link from "next/link";
 import NavBar from "@/components/Navbar";
 import SiteFooter from "@/components/SiteFooter";
+import CheckoutSuccessActions from "@/components/payments/CheckoutSuccessActions";
 
 export default function SuccessPage() {
   return (
     <div className="min-h-screen bg-white text-black font-myriad">
+      <CheckoutSuccessActions />
       <NavBar />
       <main className="max-w-2xl mx-auto px-4 sm:px-6 py-16">
         <section className="brand-surface rounded-2xl p-6 sm:p-8 text-center">

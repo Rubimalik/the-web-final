@@ -2,7 +2,7 @@ import SectionPageLayout from "@/components/SectionPageLayout";
 
 export default function ExportSalesPage() {
   return (
-    <SectionPageLayout title="EXPORT SALES">
+    <SectionPageLayout title="EXPORT SALES" showFeaturedProducts>
       <h2 className="text-2xl font-semibold mb-2 text-white">Photocopier & Printer Export</h2>
       <p>
       Our export division is a growing part of our business and we are actively building long-term partnerships with buyers around the world. With over 30 years in the office equipment trade, we supply reliable used and refurbished photocopiers and printers to international customers who need dependable machines at competitive prices.
@@ -52,3 +52,4 @@ export default function ExportSalesPage() {
     </SectionPageLayout>
   );
 }
+

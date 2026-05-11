@@ -12,7 +12,7 @@ export const metadata: Metadata = {
 
 export default function PhotocopierRentalPage() {
   return (
-    <SectionPageLayout title="PHOTOCOPIER RENTAL (NO LEASE)">
+    <SectionPageLayout title="PHOTOCOPIER RENTAL (NO LEASE)" showFeaturedProducts>
       <h2 className="text-2xl font-semibold mb-4 text-white">
         PHOTOCOPIER RENTAL SLOUGH & LONDON – NO LEASE
       </h2>
@@ -165,3 +165,4 @@ export default function PhotocopierRentalPage() {
     </SectionPageLayout>
   );
 }
+

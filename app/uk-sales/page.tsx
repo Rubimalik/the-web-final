@@ -2,7 +2,7 @@ import SectionPageLayout from "@/components/SectionPageLayout";
 
 export default function UKSalesPage() {
   return (
-    <SectionPageLayout title="UK SALES">
+    <SectionPageLayout title="UK SALES" showFeaturedProducts>
       <h2 className="text-2xl font-semibold mb-2 text-white">BuySupply – Quality Used Copiers, Delivered Nationwide</h2>
       <p>
       At BuySupply, we specialise in supplying high-quality used copiers to dealers across the UK. With extensive stock available for immediate dispatch, we help you secure the right machines quickly, efficiently, and with complete confidence.
@@ -38,3 +38,4 @@ export default function UKSalesPage() {
     </SectionPageLayout>
   );
 }
+

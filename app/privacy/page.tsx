@@ -24,7 +24,7 @@ export default function PrivacyPage() {
               database to personalize your experience.
             </p>
             <p>
-              We recommend reviewing Supabase's data handling documentation and your own compliance
+              We recommend reviewing Supabase&apos;s data handling documentation and your own compliance
               requirements.
             </p>
           </div>

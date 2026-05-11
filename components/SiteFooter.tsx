@@ -7,7 +7,7 @@ const links = [
   { label: "Products", href: "/products" },
   { label: "Contact Us", href: "/contact" },
   { label: "Cart", href: "/cart" },
-  { label: "Get a Quote", href: "/about#sell-to-us" },
+  { label: "Get a Quote", href: "/sell-to-us#sell-form" },
 ];
 
 export default function SiteFooter() {

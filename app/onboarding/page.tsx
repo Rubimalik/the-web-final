@@ -7,11 +7,12 @@ import OnboardingActionLink from "@/components/auth/OnboardingActionLink";
 import { invalidateAuthenticatedProfileCache } from "@/lib/auth/getAuthenticatedProfile";
 
 export default async function OnboardingPage() {
-  const auth = await getAuthenticatedProfile();
+  const auth = await getAuthenticatedProfile({ sessionKind: "customer" });
   if (auth.status !== "authenticated") redirect("/signin?from=%2Fonboarding");
+  const hasAdminAccess = auth.access.canAccessAdmin;
 
   if (auth.onboarding_completed) {
-    redirect(auth.role === "admin" ? "/dashboard" : "/products");
+    redirect(hasAdminAccess ? "/admin/dashboard" : "/products");
   }
 
   // Server-side onboarding progression:
@@ -39,7 +40,7 @@ export default async function OnboardingPage() {
           </h1>
           <p className="mt-4 text-black/70 text-sm sm:text-base leading-relaxed">
             Your account is ready.{" "}
-            {auth.role === "admin"
+            {hasAdminAccess
               ? "You have access to the dashboard once onboarding is complete."
               : "Complete your onboarding to activate your experience."}
           </p>
@@ -67,9 +68,9 @@ export default async function OnboardingPage() {
           <aside className="brand-surface rounded-2xl p-6 sm:p-7">
             <h2 className="text-lg font-bold brand-title mb-3">Next steps</h2>
             <div className="space-y-3 text-sm">
-              {auth.role === "admin" ? (
+              {hasAdminAccess ? (
                 <OnboardingActionLink
-                  href="/dashboard"
+                  href="/admin/dashboard"
                   className="block brand-button rounded-xl px-4 py-3 text-sm font-semibold text-black shadow-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-cyan)]/25"
                 >
                   Go to dashboard

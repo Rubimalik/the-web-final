@@ -55,9 +55,9 @@ export function createSupabaseBrowserClient(
   return createClient(supabaseUrl, supabaseAnonKey, {
     auth: {
       storageKey,
-      persistSession: options.rememberMe,
+      persistSession: true,
       detectSessionInUrl: true,
-      autoRefreshToken: options.rememberMe,
+      autoRefreshToken: true,
       storage,
       // We use PKCE with OAuth providers.
       flowType: "pkce",

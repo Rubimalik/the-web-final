@@ -9,27 +9,7 @@ import PasswordInput from "@/components/auth/PasswordInput";
 import SocialLoginButton from "@/components/auth/SocialLoginButton";
 import { createSupabaseBrowserClient } from "@/lib/supabase-browser";
 import { safeReadJsonResponse } from "@/lib/safe-json";
-import type { AuthError } from "@supabase/supabase-js";
 import { Loader2 } from "lucide-react";
-
-function isLikelyEmailError(err: unknown) {
-  const msg = err instanceof Error ? err.message : String(err);
-  const s = msg.toLowerCase();
-  return (
-    s.includes("invalid login credentials") ||
-    s.includes("invalid email") ||
-    s.includes("incorrect email") ||
-    s.includes("email or password") ||
-    s.includes("invalid") ||
-    s.includes("wrong password")
-  );
-}
-
-function isUnverifiedEmailError(err: unknown) {
-  const msg = err instanceof Error ? err.message : String(err);
-  const s = msg.toLowerCase();
-  return s.includes("email") && (s.includes("confirm") || s.includes("not confirmed") || s.includes("unverified"));
-}
 
 function GoogleIcon() {
   return (
@@ -62,17 +42,17 @@ function SignInContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  const from = searchParams.get("from") || "/dashboard";
+  const from = searchParams.get("from") || "/products";
 
   type ExchangeProfile = {
     role?: string;
+    roles?: string[];
     onboarding_completed?: boolean;
   };
 
   function getRedirectPath(profile: ExchangeProfile | null | undefined, fallback: string) {
-    if (!profile) return fallback;
-    if (profile.onboarding_completed === false) return "/onboarding";
-    if (profile.role === "admin") return "/dashboard";
+    void profile;
+    void fallback;
     return "/products";
   }
 
@@ -103,62 +83,9 @@ function SignInContent() {
   }, [rememberMe]);
 
   useEffect(() => {
-    // If Supabase has already established a session (e.g. after email confirmation),
-    // we can exchange it into the app's iron-session cookie.
-    let cancelled = false;
-
-    async function tryExchange() {
-      if (!supabaseClient) return;
-      try {
-        setError("");
-        setSubmitSuccess("");
-
-        const { data: sessionData, error: sessionError } = await supabaseClient.auth.getSession();
-        if (sessionError) return;
-
-        const session = sessionData.session;
-        if (!session?.access_token || !session.refresh_token) return;
-
-        // Avoid exchange loops during navigation/remount.
-        const key = `buysupply_auth_exchanged_${session.user.id}`;
-        if (sessionStorage.getItem(key) === "1") {
-          router.replace(from);
-          return;
-        }
-
-        const res = await fetch("/api/auth/supabase-exchange", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            access_token: session.access_token,
-            refresh_token: session.refresh_token,
-            rememberMe,
-          }),
-        });
-
-        const data = await safeReadJsonResponse<{ error?: string; profile?: ExchangeProfile }>(
-          res,
-          "SignInPage auto-exchange",
-        );
-        if (!res.ok) throw new Error(data?.error || "Failed to finalize session.");
-
-        sessionStorage.setItem(key, "1");
-        router.replace(getRedirectPath(data?.profile, from));
-      } catch (e) {
-        if (cancelled) return;
-        // Don't block rendering, but show a friendly message for configuration issues.
-        console.warn("[SignInPage tryExchange]", e);
-        setError(friendlyAuthError(e));
-      }
-    }
-
-    void tryExchange();
-
-    return () => {
-      cancelled = true;
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [from, rememberMe, router, supabaseClient]);
+    // Customer sign-in is intentionally completed through /api/auth/customer/login
+    // so retail sessions cannot accidentally exchange admin/dealer browser tokens.
+  }, []);
 
   async function handleEmailPasswordSignIn(e: React.FormEvent) {
     if (!supabaseClient) {
@@ -186,47 +113,12 @@ function SignInContent() {
 
     setLoading(true);
     try {
-      const res = await supabaseClient.auth.signInWithPassword({
-        email: email.trim().toLowerCase(),
-        password,
-      });
-
-      if (res.error || !res.data.user) {
-        const err = res.error as AuthError | null;
-        if (err) {
-          if (isUnverifiedEmailError(err)) {
-            setError("Please verify your email address before signing in.");
-          } else if (isLikelyEmailError(err)) {
-            setError("Invalid email or password.");
-          } else {
-            setError(err.message || "Sign in failed. Please try again.");
-          }
-          return;
-        }
-
-        setError("Invalid email or password.");
-        return;
-      }
-
-      // Read the active session from the auth client to ensure both tokens are present.
-      const { data: latestSessionData, error: latestSessionError } =
-        await supabaseClient.auth.getSession();
-      if (latestSessionError) {
-        throw latestSessionError;
-      }
-      const session = latestSessionData.session ?? res.data.session;
-      if (!session?.access_token || !session.refresh_token) {
-        setShowVerification(true);
-        setError("Please verify your email address before signing in.");
-        return;
-      }
-
-      const exchangeRes = await fetch("/api/auth/supabase-exchange", {
+      const exchangeRes = await fetch("/api/auth/customer/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          access_token: session.access_token,
-          refresh_token: session.refresh_token,
+          email: email.trim().toLowerCase(),
+          password,
           rememberMe,
         }),
       });
@@ -236,7 +128,15 @@ function SignInContent() {
         profile?: ExchangeProfile;
       }>(exchangeRes, "SignInPage exchange");
       if (!exchangeRes.ok) {
-        throw new Error(data?.error || "Failed to finalize application session.");
+        if (exchangeRes.status === 401) {
+          setError("Invalid email or password.");
+          return;
+        }
+        if (exchangeRes.status === 403) {
+          setError(data?.error || "This account cannot sign in to the retail customer area.");
+          return;
+        }
+        throw new Error(data?.error || "Failed to sign in.");
       }
 
       setSubmitSuccess("Signed in successfully.");
@@ -362,10 +262,10 @@ function SignInContent() {
   }
 
   return (
-    <AuthLayout eyebrow="Account access">
+    <AuthLayout eyebrow="BuySupply account">
       <AuthForm
-        title="Sign in"
-        description="Use your email & password or continue with Google."
+        title="Welcome back"
+        description="Sign in to manage your orders and continue shopping."
         footer={
           <p className="text-sm text-black/60">
             New here?{" "}
@@ -436,7 +336,7 @@ function SignInContent() {
           </div>
 
           {showReset ? (
-            <div className="rounded-xl border border-black/10 bg-white/60 p-4 space-y-3 animate-[fadeIn_200ms_ease-out]">
+            <div className="animate-[fadeIn_200ms_ease-out] space-y-3 rounded-xl border border-black/10 bg-slate-50/80 p-4">
               <p className="text-sm text-black/70 font-semibold">
                 We&apos;ll email you a reset link.
               </p>
@@ -474,7 +374,7 @@ function SignInContent() {
           ) : null}
 
           {showVerification ? (
-            <div className="rounded-xl border border-black/10 bg-white/60 p-4 space-y-3 animate-[fadeIn_200ms_ease-out]">
+            <div className="animate-[fadeIn_200ms_ease-out] space-y-3 rounded-xl border border-black/10 bg-slate-50/80 p-4">
               <p className="text-sm text-black/70 font-semibold">
                 Check your inbox to verify your email.
               </p>
@@ -565,7 +465,7 @@ function SignInContent() {
           </div>
         </form>
 
-        <div className="mt-4 text-xs text-black/45 leading-relaxed">
+        <div className="mt-4 text-center text-xs leading-relaxed text-black/45">
           By continuing, you agree to our Terms & Privacy.
         </div>
       </AuthForm>
