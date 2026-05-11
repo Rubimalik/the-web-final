@@ -3,7 +3,7 @@ import { seedDefaultCategories } from "@/lib/catalog-store";
 
 async function main() {
   await seedDefaultCategories();
-  console.log("✓ Seeded: Photocopiers + Consumables");
+  console.log("Seeded product categories");
 }
 
 main().catch(console.error);

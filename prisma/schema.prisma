@@ -19,13 +19,26 @@ model Product {
   description String?
   url         String?
   price       Float?
+  dealerPrice Float?
+  dealerNotes String?
+  visibility  String         @default("public")
   status      String         @default("draft")
+  isFeatured  Boolean        @default(false)
+  featuredOrder Int?
   tags        String?
   createdAt   DateTime       @default(now())
   updatedAt   DateTime       @updatedAt
   images      ProductImage[]
   category    Category?      @relation(fields: [categoryId], references: [id])
   categoryId  Int?
+  orderItems  OrderItem[]
+
+  @@index([status])
+  @@index([isFeatured, featuredOrder])
+  @@index([visibility])
+  @@index([categoryId])
+  @@index([createdAt])
+  @@index([updatedAt])
 }
 
 model ProductImage {
@@ -39,6 +52,10 @@ model ProductImage {
   order      Int       @default(0)
   createdAt  DateTime  @default(now())
   category   Category? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+
+  @@index([productId])
+  @@index([categoryId])
+  @@index([order])
 }
 
 model Category {
@@ -49,4 +66,56 @@ model Category {
   updatedAt     DateTime       @updatedAt
   products      Product[]
   productImages ProductImage[]
+}
+
+model Order {
+  id               String      @id @default(uuid()) @db.Uuid
+  userId           String?     @db.Uuid
+  customerName     String?
+  customerEmail    String?
+  customerPhone    String?
+  notes            String?
+  adminNotes       String?
+  status           String      @default("pending")
+  paymentStatus    String      @default("unpaid")
+  paymentProvider  String?
+  paymentMethod    String?
+  paymentSessionId String?
+  stripeSessionId  String?
+  stripePaymentIntentId String?
+  amountTotal      Float?
+  currency         String      @default("gbp")
+  source           String      @default("checkout")
+  metadata         Json?
+  createdAt        DateTime    @default(now())
+  updatedAt        DateTime    @updatedAt
+  items            OrderItem[]
+
+  @@index([status])
+  @@index([paymentStatus])
+  @@index([userId])
+  @@index([source])
+  @@index([userId, source, createdAt])
+  @@index([customerEmail])
+  @@index([paymentSessionId])
+  @@index([stripeSessionId])
+  @@index([stripePaymentIntentId])
+  @@index([createdAt])
+}
+
+model OrderItem {
+  id          String   @id @default(uuid()) @db.Uuid
+  orderId     String   @db.Uuid
+  productId   Int?
+  productName String
+  unitPrice   Float?
+  quantity    Int      @default(1)
+  lineTotal   Float?
+  metadata    Json?
+  createdAt   DateTime @default(now())
+  order       Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product     Product? @relation(fields: [productId], references: [id], onDelete: SetNull)
+
+  @@index([orderId])
+  @@index([productId])
 }
