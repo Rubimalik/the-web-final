@@ -42,13 +42,13 @@ function ConsumablesHero() {
       <div className="absolute inset-0 opacity-30">
         <img
           src="/images/parts banner.png"
-          alt="Parts and Toners Banner"
+          alt="Parts and Toner Banner"
           className="h-full w-full object-cover"
         />
       </div>
       <div className="relative mx-auto max-w-6xl px-4 py-12 sm:py-16">
         <h1 className="text-3xl font-extrabold uppercase tracking-tight text-white sm:text-4xl">
-          Parts and Toners
+          Parts and Toner
         </h1>
       </div>
     </section>

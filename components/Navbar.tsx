@@ -39,7 +39,7 @@ export default function NavBar() {
     return (
         <>
             <header
-                className="sticky top-0 z-50 w-full border-b bg-white/95 backdrop-blur-md transition-all duration-500"
+                className="sticky top-0 z-50 w-full border-b bg-white transition-all duration-500"
                 style={{
                     borderColor: scrolled ? "rgba(0,207,255,0.35)" : "rgba(0,207,255,0.2)",
                     boxShadow: scrolled ? "0 6px 28px rgba(0,0,0,0.08)" : "none",

@@ -146,6 +146,7 @@ export default function RootLayout({
     <html lang="en">
       <body
         className={`antialiased ${myriadPro.variable} ${roboto.variable}  bg-white text-gray-900`}
+        style={{ backgroundColor: "#ffffff" }}
       >
         <CartProvider>{children}</CartProvider>
       </body>

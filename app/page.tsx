@@ -62,7 +62,7 @@ export default function Home() {
 
             <div className="flex flex-col items-center gap-2">
               <span className="text-black/80 text-[10px] sm:text-[14px] md:text-[16px] font-medium tracking-wider uppercase text-center">
-                Consumables
+                Parts and Toner
               </span>
               <Link
                 href="/products?category=consumables"

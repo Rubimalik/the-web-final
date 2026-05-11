@@ -153,8 +153,9 @@
   }
 
   html,
-  body {
-    background: #ffffff;
+  body,
+  #__next {
+    background: #ffffff !important;
     color-scheme: light;
     min-height: 100%;
   }

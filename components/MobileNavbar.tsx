@@ -1,26 +1,30 @@
 "use client"
 
 import { useState } from "react"
-import { Menu, ShoppingCart, X } from "lucide-react"
+import { Menu, ShoppingCart, X, ChevronDown } from "lucide-react"
 import Link from "next/link"
 import { useCart } from "@/components/CartProvider"
 import ProfileMenu from "@/components/auth/ProfileMenu"
 
 const navLinks = [
     { label: "HOME", href: "/" },
-    { label: "ABOUT", href: "/about" },
+    { label: "ABOUT", isToggle: true },
+    { label: "PRODUCTS", href: "/products" },
+    { label: "CONTACT US", href: "/contact" },
+]
+
+const aboutLinks = [
     { label: "UK Sales", href: "/uk-sales" },
     { label: "Export Sales", href: "/export-sales" },
     { label: "Leasing", href: "/leasing" },
     { label: "Photocopier Rental", href: "/photocopier-rental" },
     { label: "Collection & Storage", href: "/collection-storage" },
     { label: "Sell To Us", href: "/sell-to-us" },
-    { label: "PRODUCTS", href: "/products" },
-    { label: "CONTACT US", href: "/contact" },
 ]
 
 export default function MobileNav() {
     const [menuOpen, setMenuOpen] = useState(false)
+    const [aboutOpen, setAboutOpen] = useState(false)
     const { itemCount, cartPulseKey } = useCart()
 
     return (
@@ -57,7 +61,10 @@ export default function MobileNav() {
                     <ProfileMenu />
                     {/* Hamburger — animates between ☰ and ✕ */}
                     <button
-                        onClick={() => setMenuOpen((prev) => !prev)}
+                        onClick={() => setMenuOpen((prev) => {
+                            if (prev) setAboutOpen(false)
+                            return !prev
+                        })}
                         className="text-black/70 hover:text-[var(--brand-pink-hover)] transition-all duration-300 p-1"
                         aria-label={menuOpen ? "Close menu" : "Open menu"}
                     >
@@ -88,7 +95,7 @@ export default function MobileNav() {
             {/* ── Dropdown with slide + fade ── */}
             {menuOpen && (
                 <div
-                    className="absolute top-full left-0 w-full bg-white/95 backdrop-blur-sm border-t border-black/10 px-4 pb-5 z-50 overflow-hidden"
+                    className="absolute top-full left-0 w-full bg-white border-t border-black/10 px-4 pb-5 z-50 overflow-hidden"
                     style={{
                         transition: "opacity 300ms ease, transform 300ms ease",
                         opacity: 1,
@@ -97,23 +104,64 @@ export default function MobileNav() {
                 >
                     <ul className="flex flex-col pt-2">
                         {navLinks.map((link, i) => (
-                            <li key={link.href}>
-                                <Link
-                                    href={link.href}
-                                    onClick={() => setMenuOpen(false)}
-                                    className="block text-black/75 hover:text-[var(--brand-pink-hover)] py-3 border-b border-black/5 font-bold
-                                               transition-colors duration-200 hover:pl-1"
-                                    style={{
-                                        fontSize: "clamp(15px, 4.1vw, 19px)",
-                                        transitionProperty: "color, padding-left, opacity, transform",
-                                        transitionDuration: "200ms",
-                                        opacity: 1,
-                                        transform: "translateX(0)",
-                                        transitionDelay: `${i * 50}ms`,
-                                    }}
-                                >
-                                    {link.label}
-                                </Link>
+                            <li key={link.label}>
+                                {link.isToggle ? (
+                                    <>
+                                        <button
+                                            type="button"
+                                            onClick={() => setAboutOpen((prev) => !prev)}
+                                            className="w-full flex items-center justify-between text-black/75 hover:text-[var(--brand-pink-hover)] py-3 border-b border-black/5 font-bold transition-colors duration-200"
+                                            aria-expanded={aboutOpen}
+                                        >
+                                            <span style={{ fontSize: "clamp(15px, 4.1vw, 19px)" }}>
+                                                {link.label}
+                                            </span>
+                                            <ChevronDown
+                                                className={`h-4 w-4 transition-transform duration-200 ${aboutOpen ? "rotate-180" : ""}`}
+                                            />
+                                        </button>
+                                        {aboutOpen && (
+                                            <div className="overflow-hidden transition-all duration-200">
+                                                <ul className="flex flex-col bg-white py-1">
+                                                    {aboutLinks.map((aboutLink) => (
+                                                        <li key={aboutLink.href}>
+                                                            <Link
+                                                                href={aboutLink.href}
+                                                                onClick={() => {
+                                                                    setMenuOpen(false)
+                                                                    setAboutOpen(false)
+                                                                }}
+                                                                className="block text-black/75 hover:text-[var(--brand-pink-hover)] py-3 pl-5 border-b border-black/5 font-semibold transition-colors duration-200"
+                                                                style={{ fontSize: "clamp(14px, 4vw, 18px)" }}
+                                                            >
+                                                                {aboutLink.label}
+                                                            </Link>
+                                                        </li>
+                                                    ))}
+                                                </ul>
+                                            </div>
+                                        )}
+                                    </>
+                                ) : (
+                                    <Link
+                                        href={link.href!}
+                                        onClick={() => {
+                                            setMenuOpen(false)
+                                            setAboutOpen(false)
+                                        }}
+                                        className="block text-black/75 hover:text-[var(--brand-pink-hover)] py-3 border-b border-black/5 font-bold transition-colors duration-200 hover:pl-1"
+                                        style={{
+                                            fontSize: "clamp(15px, 4.1vw, 19px)",
+                                            transitionProperty: "color, padding-left, opacity, transform",
+                                            transitionDuration: "200ms",
+                                            opacity: 1,
+                                            transform: "translateX(0)",
+                                            transitionDelay: `${i * 50}ms`,
+                                        }}
+                                    >
+                                        {link.label}
+                                    </Link>
+                                )}
                             </li>
                         ))}
                     </ul>
@@ -121,7 +169,10 @@ export default function MobileNav() {
                     {/* Mobile CTA */}
                     <Link
                         href="/sell-to-us"
-                        onClick={() => setMenuOpen(false)}
+                        onClick={() => {
+                            setMenuOpen(false)
+                            setAboutOpen(false)
+                        }}
                         className="mt-4 flex items-center justify-center brand-button py-2.5 rounded
                                    transition-all duration-300 hover:scale-[1.02] active:scale-95 w-full"
                         style={{
