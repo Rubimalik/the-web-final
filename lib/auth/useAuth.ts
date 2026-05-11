@@ -9,6 +9,8 @@ type UseAuthResult = {
   user: AuthenticatedProfile["user"] | null;
   profile: AuthenticatedProfile["profile"] | null;
   role: AuthenticatedProfile["role"] | null;
+  roles: AuthenticatedProfile["roles"];
+  access: AuthenticatedProfile["access"] | null;
   onboarding_step: number | null;
   loading: boolean;
   refresh: () => Promise<void>;
@@ -28,15 +30,6 @@ async function runRefresh() {
   loadingSnapshot = true;
   notifySubscribers();
   try {
-    if (typeof window !== "undefined") {
-      const hasLocalToken = Boolean(window.localStorage.getItem("buysupply_auth"));
-      const hasSessionToken = Boolean(window.sessionStorage.getItem("buysupply_auth"));
-      if (!hasLocalToken && !hasSessionToken) {
-        authSnapshot = null;
-        return;
-      }
-    }
-
     const res = await fetch("/api/auth/profile", {
       method: "GET",
       cache: "no-store",
@@ -49,6 +42,8 @@ async function runRefresh() {
       user: AuthenticatedProfile["user"];
       profile: AuthenticatedProfile["profile"];
       role: AuthenticatedProfile["role"];
+      roles: AuthenticatedProfile["roles"];
+      access: AuthenticatedProfile["access"];
       onboarding_step: number;
       onboarding_completed: boolean;
     };
@@ -58,6 +53,8 @@ async function runRefresh() {
         user: data.user,
         profile: data.profile,
         role: data.role,
+        roles: data.roles ?? [],
+        access: data.access,
         onboarding_step: data.onboarding_step,
         onboarding_completed: data.onboarding_completed,
       };
@@ -144,6 +141,8 @@ export function useAuth(): UseAuthResult {
     user: auth?.user ?? null,
     profile: auth?.profile ?? null,
     role: auth?.role ?? null,
+    roles: auth?.roles ?? [],
+    access: auth?.access ?? null,
     onboarding_step: auth?.onboarding_step ?? null,
     loading,
     refresh,

@@ -1,10 +1,13 @@
 import { getIronSession, IronSession } from "iron-session";
 import { cookies } from "next/headers";
 
+export type AuthSessionKind = "admin" | "dealer" | "customer" | "legacy";
+
 export interface SessionData {
   isLoggedIn: boolean;
   email?: string;
   userId?: string;
+  authRole?: AuthSessionKind;
 
   // Supabase tokens for server-side session verification.
   // Authorization decisions must ALWAYS be made from `public.profiles`.
@@ -30,17 +33,47 @@ export const sessionOptions = {
   },
 };
 
-export function getSessionOptions(rememberMe: boolean) {
+export const adminSessionOptions = {
+  ...sessionOptions,
+  cookieName: "admin_session",
+};
+
+export const dealerSessionOptions = {
+  ...sessionOptions,
+  cookieName: "dealer_session",
+  cookieOptions: {
+    ...sessionOptions.cookieOptions,
+    maxAge: 60 * 60 * 12,
+  },
+};
+
+export const customerSessionOptions = {
+  ...sessionOptions,
+  cookieName: "customer_session",
+};
+
+export function getSessionOptions(
+  rememberMe: boolean,
+  kind: AuthSessionKind = "legacy",
+) {
+  const baseOptions = getSessionOptionsForKind(kind);
   return {
-    ...sessionOptions,
+    ...baseOptions,
     cookieOptions: {
-      ...sessionOptions.cookieOptions,
+      ...baseOptions.cookieOptions,
       // If "remember me" is disabled, use a session cookie (no maxAge).
-      maxAge: rememberMe ? sessionOptions.cookieOptions.maxAge : undefined,
+      maxAge: rememberMe ? baseOptions.cookieOptions.maxAge : undefined,
     },
   };
 }
 
-export async function getSession() {
-  return getIronSession<SessionData>(await cookies(), sessionOptions);
+export function getSessionOptionsForKind(kind: AuthSessionKind = "legacy") {
+  if (kind === "admin") return adminSessionOptions;
+  if (kind === "dealer") return dealerSessionOptions;
+  if (kind === "customer") return customerSessionOptions;
+  return sessionOptions;
+}
+
+export async function getSession(kind: AuthSessionKind = "legacy") {
+  return getIronSession<SessionData>(await cookies(), getSessionOptionsForKind(kind));
 }
