@@ -1,0 +1,124 @@
+import DealerFeaturedProductsSection from "@/components/dealer/DealerFeaturedProductsSection";
+import Image from "next/image";
+import Link from "next/link";
+
+export default function DealerHomePage() {
+  return (
+    <div className="bg-white text-black min-h-screen font-myriad">
+      <section className="min-h-screen bg-white flex flex-col items-center justify-start pt-8 sm:pt-12 md:pt-16 px-4 text-center">
+        <Image
+          src={"/logo.png"}
+          width={140}
+          height={150}
+          alt="BUYSUPPLY Logo"
+          priority
+          sizes="(max-width: 640px) 140px, (max-width: 768px) 150px, 170px"
+          className="w-[140px] sm:w-[150px] md:w-[170px] h-auto mb-6 sm:mb-8"
+        />
+
+        <h1 className="font-[900] font-myriad brand-title tracking-[2px] leading-tight text-[41px] sm:text-[52px] md:text-[68px] mb-2">
+          BUYSUPPLY
+        </h1>
+
+        <p className="mt-2 text-[16px] sm:text-[22px] md:text-[28px] font-semibold text-black leading-snug sm:leading-normal max-w-[90%] sm:max-w-[720px] font-myriad">
+          Buying & Supplying in the Office Industry
+          Since 2001
+        </p>
+
+        <p className="mt-5 text-[14px] sm:text-[16px] md:text-[18px] text-black/70 max-w-[90%] sm:max-w-[640px] mx-auto leading-relaxed font-myriad">
+          We buy & sell photocopiers, printers, peripherals, toners, ink, and consumables.
+        </p>
+
+        <section className="mt-10 sm:mt-14 flex flex-col items-center">
+          <h2 className="text-black font-semibold text-[15px] sm:text-[28px] md:text-[36px] mb-6 sm:mb-8 font-myriad">
+            PRESS HERE FOR STOCK
+          </h2>
+          <div className="flex flex-col sm:flex-row gap-8 sm:gap-16 items-center justify-center">
+            <div className="flex flex-col items-center gap-2">
+              <span className="text-black/80 text-[10px] sm:text-[14px] md:text-[16px] font-medium tracking-wider uppercase text-center">
+                Printers
+              </span>
+              <Link
+                href="/dealer/products/printers"
+                className="w-[62px] h-[62px] sm:w-[75px] sm:h-[75px] md:w-[85px] md:h-[85px]
+                 rounded-full transition-all duration-300
+                 hover:scale-105 active:scale-95 shadow-lg overflow-hidden"
+              >
+                <Image
+                  src="/button.png"
+                  alt="Printers"
+                  width={85}
+                  height={85}
+                  sizes="(max-width: 640px) 62px, (max-width: 768px) 75px, 85px"
+                  className="w-full h-full object-cover"
+                />
+              </Link>
+              <span className="text-black/70 text-[8px] sm:text-[13px] md:text-[14px]">Start</span>
+            </div>
+
+            <div className="flex flex-col items-center gap-2">
+              <span className="text-black/80 text-[10px] sm:text-[14px] md:text-[16px] font-medium tracking-wider uppercase text-center">
+                Consumables
+              </span>
+              <Link
+                href="/dealer/products/consumables"
+                className="w-[62px] h-[62px] sm:w-[75px] sm:h-[75px] md:w-[85px] md:h-[85px]
+                 rounded-full transition-all duration-300
+                 hover:scale-105 active:scale-95 shadow-lg overflow-hidden"
+              >
+                <Image
+                  src="/button.png"
+                  alt="Consumables"
+                  width={85}
+                  height={85}
+                  sizes="(max-width: 640px) 62px, (max-width: 768px) 75px, 85px"
+                  className="w-full h-full object-cover"
+                />
+              </Link>
+              <span className="text-black/70 text-[8px] sm:text-[13px] md:text-[14px]">Start</span>
+            </div>
+          </div>
+        </section>
+      </section>
+
+      <section className="border-t border-black/10 px-4 py-14 sm:py-16">
+        <div className="max-w-5xl mx-auto text-center">
+          <h2 className="text-3xl md:text-4xl font-bold mb-5 brand-title">About Us</h2>
+          <p className="text-black/75 text-sm sm:text-base md:text-lg leading-relaxed max-w-3xl mx-auto">
+            BuySupply is a trusted UK office equipment partner focused on buying, supplying, and supporting
+            photocopiers, printers, and consumables. Our team combines market knowledge with practical service to help
+            businesses move stock quickly and confidently.
+          </p>
+        </div>
+      </section>
+
+      <DealerFeaturedProductsSection />
+
+      <section className="border-t border-black/10 px-4 pb-16 sm:pb-20 pt-14 sm:pt-16">
+        <div className="max-w-5xl mx-auto">
+          <h2 className="text-3xl md:text-4xl font-bold mb-5 text-center brand-title">Sell To Us</h2>
+          <p className="text-black/75 text-sm sm:text-base md:text-lg leading-relaxed text-center max-w-3xl mx-auto">
+            Have used photocopiers, printers, or surplus toner? We offer competitive prices, fast UK-wide collection,
+            and quick payment.
+          </p>
+
+          <div className="mt-8 flex flex-col sm:flex-row gap-4 justify-center items-center">
+            <Link
+              href="/dealer/sell-to-us#sell-form"
+              className="brand-button px-6 py-3 rounded-lg transition-all duration-300"
+            >
+              Go to Sell To Us Section
+            </Link>
+            <Link
+              href="mailto:Sales@buysupply.me"
+              className="border border-black/25 text-black px-6 py-3 rounded-lg hover:border-[var(--brand-cyan)] hover:text-[var(--brand-cyan)] transition-all duration-300"
+            >
+              Contact Our Team
+            </Link>
+          </div>
+        </div>
+      </section>
+
+    </div>
+  );
+}
