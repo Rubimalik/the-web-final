@@ -3,7 +3,7 @@ import { getAuthenticatedProfile } from "@/lib/auth/getAuthenticatedProfile";
 
 export async function GET() {
   try {
-    const auth = await getAuthenticatedProfile();
+    const auth = await getAuthenticatedProfile({ sessionKind: "customer" });
     if (auth.status !== "authenticated" || !auth.user || !auth.profile || !auth.role) {
       return NextResponse.json({
         authenticated: false,
@@ -17,6 +17,8 @@ export async function GET() {
       user: auth.user,
       profile: auth.profile,
       role: auth.role,
+      roles: auth.roles,
+      access: auth.access,
       onboarding_step: auth.onboarding_step,
       onboarding_completed: auth.onboarding_completed,
     });

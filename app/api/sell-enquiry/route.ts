@@ -117,7 +117,7 @@ export async function POST(req: NextRequest) {
     });
 
     return NextResponse.json({ success: true });
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error("[POST /api/sell-enquiry]", err);
     return NextResponse.json(
       { error: "Failed to send enquiry. Please try again." },

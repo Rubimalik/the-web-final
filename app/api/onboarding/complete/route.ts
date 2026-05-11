@@ -5,7 +5,7 @@ import { invalidateAuthenticatedProfileCache } from "@/lib/auth/getAuthenticated
 
 export async function POST() {
   try {
-    const auth = await getAuthenticatedProfile();
+    const auth = await getAuthenticatedProfile({ sessionKind: "customer" });
     if (auth.status !== "authenticated") {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
@@ -15,7 +15,7 @@ export async function POST() {
     // Server-side step progression validation:
     // - Admins can always complete (bootstrapped with step=3).
     // - Regular users must reach step 2 before step 3 completion.
-    const canComplete = auth.role === "admin" || (auth.onboarding_step ?? 0) >= 2;
+    const canComplete = auth.roles.includes("admin") || (auth.onboarding_step ?? 0) >= 2;
     if (!canComplete) {
       return NextResponse.json(
         { error: "Please complete the previous onboarding step(s) first." },

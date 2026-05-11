@@ -11,7 +11,7 @@ function AuthCallbackContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  const nextPath = searchParams.get("next") || "/dashboard";
+  const nextPath = searchParams.get("next") || "/products";
   const remember = searchParams.get("remember") ?? "1";
   const rememberMe = remember !== "0";
 
@@ -25,6 +25,7 @@ function AuthCallbackContent() {
 
   type ExchangeProfile = {
     role?: string;
+    roles?: string[];
     onboarding_completed?: boolean;
   };
 
@@ -32,7 +33,6 @@ function AuthCallbackContent() {
     (profile: ExchangeProfile | null | undefined, fallback: string) => {
       if (!profile) return fallback;
       if (profile.onboarding_completed === false) return "/onboarding";
-      if (profile.role === "admin") return "/dashboard";
       return "/products";
     },
     [],

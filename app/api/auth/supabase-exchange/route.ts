@@ -4,6 +4,7 @@ import { safeReadRequestJson } from "@/lib/safe-json";
 import { type SessionData, getSessionOptions } from "@/lib/session";
 import { getAuthenticatedProfile } from "@/lib/auth/getAuthenticatedProfile";
 import { createSupabaseAnonClient } from "@/lib/supabase";
+import { isCustomerAuth } from "@/lib/customer-auth";
 
 type Payload = {
   access_token?: string;
@@ -97,19 +98,29 @@ export async function POST(req: Request) {
       );
     }
 
+    if (!isCustomerAuth(auth)) {
+      return NextResponse.json(
+        { error: "This account cannot sign in to the retail customer area." },
+        { status: 403 },
+      );
+    }
+
     const response = NextResponse.json({
       success: true,
       profile: auth.profile,
+      roles: auth.roles,
+      access: auth.access,
     });
 
     // Mirror Supabase auth -> existing iron-session cookie so protected routes keep working.
     const session = await getIronSession<SessionData>(
       req,
       response,
-      getSessionOptions(rememberMe),
+      getSessionOptions(rememberMe, "customer"),
     );
 
     session.isLoggedIn = true;
+    session.authRole = "customer";
     session.email = auth.user.email ?? "";
     session.userId = auth.user.id;
     // Cache tokens for server-side verification; DB remains the source of truth.

@@ -5,6 +5,7 @@ import {
   getStripeWebhookSecret,
 } from "@/lib/stripe";
 import { storeSuccessfulPayment } from "@/lib/payments/store";
+import { markStripePaymentComplete, markStripePaymentFailed } from "@/lib/orders-store";
 
 export async function POST(req: Request) {
   const signature = req.headers.get("stripe-signature");
@@ -40,8 +41,28 @@ export async function POST(req: Request) {
         createdAt: new Date().toISOString(),
       });
 
-      // Replace with DB insert in production.
+      await markStripePaymentComplete({
+        orderId: session.metadata?.orderId ?? null,
+        sessionId: session.id,
+        paymentIntentId:
+          typeof session.payment_intent === "string" ? session.payment_intent : null,
+        amountTotal: session.amount_total ?? 0,
+        currency: session.currency ?? "gbp",
+        customerEmail: session.customer_details?.email ?? null,
+      });
+
       console.info("[POST /api/webhook] Stored successful payment", paymentRecord);
+    }
+
+    if (
+      event.type === "checkout.session.async_payment_failed" ||
+      event.type === "checkout.session.expired"
+    ) {
+      const session = event.data.object as Stripe.Checkout.Session;
+      await markStripePaymentFailed({
+        orderId: session.metadata?.orderId ?? null,
+        sessionId: session.id,
+      });
     }
 
     return NextResponse.json({ received: true });
