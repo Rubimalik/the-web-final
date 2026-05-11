@@ -4,6 +4,7 @@ import { getProductImagePlaceholderUrl } from "@/lib/product-image-placeholder";
 import { safeReadJsonResponse } from "@/lib/safe-json";
 
 const BASE_URL = "https://buysupply.me";
+const PRICE_VALID_UNTIL = "2026-12-31";
 
 interface ProductImage {
   url: string;
@@ -58,7 +59,7 @@ export async function generateMetadata(
     };
   }
 
-  const primaryImg = product.images?.find((i: any) => i.isPrimary) ?? product.images?.[0];
+  const primaryImg = product.images?.find((i) => i.isPrimary) ?? product.images?.[0];
   const fallbackImage = getProductImagePlaceholderUrl();
   const price = product.price != null ? `£${Number(product.price).toFixed(2)}` : "POA";
   const shortDesc = product.description
@@ -93,8 +94,6 @@ export async function generateMetadata(
 
 // ── JSON-LD Product Schema ────────────────────────────────────────────────
 function ProductSchema({ product }: { product: ProductSeoData }) {
-  const primaryImg = product.images?.find((i) => i.isPrimary) ?? product.images?.[0];
-
   const schema = {
     "@context": "https://schema.org",
     "@type": "Product",
@@ -113,9 +112,7 @@ function ProductSchema({ product }: { product: ProductSeoData }) {
       url: `${BASE_URL}/products/${product.id}`,
       priceCurrency: "GBP",
       price: product.price ?? 0,
-      priceValidUntil: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
-        .toISOString()
-        .split("T")[0],
+      priceValidUntil: PRICE_VALID_UNTIL,
       availability: "https://schema.org/InStock",
       seller: {
         "@type": "Organization",

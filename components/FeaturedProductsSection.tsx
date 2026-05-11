@@ -3,182 +3,187 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import ProductCard, { type ProductCardProduct } from "@/components/ProductCard";
 import { useCart } from "@/components/CartProvider";
-import { getProductImagePlaceholderUrl } from "@/lib/product-image-placeholder";
 import { safeReadJsonResponse } from "@/lib/safe-json";
+import { getConsumableProductHref } from "@/lib/product-taxonomy";
 
-interface ProductImage {
-  id: number;
-  url: string;
-  isPrimary: boolean;
+function mergeProducts(
+  preferred: ProductCardProduct[],
+  fallback: ProductCardProduct[],
+  excludeId?: number,
+) {
+  const seen = new Set<number>();
+  const merged: ProductCardProduct[] = [];
+
+  for (const product of [...preferred, ...fallback]) {
+    if (product.id === excludeId || seen.has(product.id)) continue;
+    seen.add(product.id);
+    merged.push(product);
+  }
+
+  return merged;
 }
 
-interface Product {
-  id: number;
-  name: string;
-  price: number | null;
-  images: ProductImage[];
-}
-
-function useItemsPerView() {
-  const [itemsPerView, setItemsPerView] = useState(4);
-
-  useEffect(() => {
-    const update = () => {
-      const w = window.innerWidth;
-      if (w >= 1200) setItemsPerView(4);
-      else if (w >= 900) setItemsPerView(3);
-      else if (w >= 640) setItemsPerView(2);
-      else setItemsPerView(1);
-    };
-
-    update();
-    window.addEventListener("resize", update);
-    return () => window.removeEventListener("resize", update);
-  }, []);
-
-  return itemsPerView;
-}
-
-export default function FeaturedProductsSection() {
-  const [products, setProducts] = useState<Product[]>([]);
+export default function FeaturedProductsSection({
+  title = "Featured Products",
+  kicker = "Recommended",
+  description = "Explore popular products selected from our active public catalogue.",
+  categorySlug,
+  categorySlugs,
+  excludeId,
+  limit = 8,
+  className = "",
+  centered = false,
+  showBrowseLink = true,
+  allowGlobalFallback = true,
+  showEmptyState = false,
+}: {
+  title?: string;
+  kicker?: string;
+  description?: string;
+  categorySlug?: string | null;
+  categorySlugs?: string[];
+  excludeId?: number;
+  limit?: number;
+  className?: string;
+  centered?: boolean;
+  showBrowseLink?: boolean;
+  allowGlobalFallback?: boolean;
+  showEmptyState?: boolean;
+}) {
+  const [preferredProducts, setPreferredProducts] = useState<ProductCardProduct[]>([]);
+  const [fallbackProducts, setFallbackProducts] = useState<ProductCardProduct[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [index, setIndex] = useState(0);
-  const itemsPerView = useItemsPerView();
-  const { addToCart, buyNow } = useCart();
+  const { addToCart } = useCart();
   const router = useRouter();
 
   useEffect(() => {
-    void (async () => {
+    let cancelled = false;
+
+    async function loadProducts() {
+      setIsLoading(true);
       try {
-        const res = await fetch("/api/product?status=active&page=1&limit=10");
-        const data = await safeReadJsonResponse<{ data?: Product[] }>(res, "FeaturedProductsSection fetch");
-        const incoming = Array.isArray(data?.data) ? data.data : [];
-        setProducts(incoming.slice(0, 10));
+        const requests: Promise<Response>[] = [];
+        if (categorySlugs && categorySlugs.length > 0) {
+          requests.push(fetch(`/api/product?public=1&featured=1&status=active&slugs=${encodeURIComponent(categorySlugs.join(","))}&page=1&limit=${limit + 1}`));
+        } else if (categorySlug) {
+          requests.push(fetch(`/api/product?public=1&featured=1&status=active&slug=${encodeURIComponent(categorySlug)}&page=1&limit=${limit + 1}`));
+        }
+        if ((!categorySlug && (!categorySlugs || categorySlugs.length === 0)) || allowGlobalFallback) {
+          requests.push(fetch(`/api/product?public=1&featured=1&status=active&page=1&limit=${limit + 4}`));
+        }
+
+        const responses = await Promise.all(requests);
+        const payloads = await Promise.all(
+          responses.map((response) =>
+            safeReadJsonResponse<{ data?: ProductCardProduct[] }>(
+              response,
+              "FeaturedProductsSection fetch",
+            ),
+          ),
+        );
+
+        if (cancelled) return;
+        const hasCategoryFilter = Boolean(categorySlug || (categorySlugs && categorySlugs.length > 0));
+        const preferred = hasCategoryFilter ? payloads[0]?.data ?? [] : [];
+        const fallback = hasCategoryFilter
+          ? allowGlobalFallback
+            ? payloads[1]?.data ?? []
+            : []
+          : payloads[0]?.data ?? [];
+        setPreferredProducts(Array.isArray(preferred) ? preferred : []);
+        setFallbackProducts(Array.isArray(fallback) ? fallback : []);
+      } catch {
+        if (!cancelled) {
+          setPreferredProducts([]);
+          setFallbackProducts([]);
+        }
       } finally {
-        setIsLoading(false);
+        if (!cancelled) setIsLoading(false);
       }
-    })();
-  }, []);
+    }
 
-  useEffect(() => {
-    setIndex(0);
-  }, [itemsPerView]);
+    void loadProducts();
 
-  const maxIndex = Math.max(0, products.length - itemsPerView);
-  const canMovePrev = index > 0;
-  const canMoveNext = index < maxIndex;
+    return () => {
+      cancelled = true;
+    };
+  }, [allowGlobalFallback, categorySlug, categorySlugs, excludeId, limit]);
 
-  const translatePercent = useMemo(() => {
-    if (itemsPerView <= 0) return 0;
-    return index * (100 / itemsPerView);
-  }, [index, itemsPerView]);
+  const products = useMemo(
+    () => mergeProducts(preferredProducts, fallbackProducts, excludeId).slice(0, limit),
+    [excludeId, fallbackProducts, limit, preferredProducts],
+  );
+
+  if (!isLoading && products.length === 0 && !showEmptyState) {
+    return null;
+  }
 
   return (
-    <section className="border-t border-black/10 px-4 py-14 sm:py-16">
-      <div className="max-w-6xl mx-auto">
-        <div className="flex items-center justify-between gap-4 mb-6">
-          <div>
-            <p className="text-xs uppercase tracking-[0.2em] text-[var(--brand-cyan)]">Store Highlights</p>
-            <h2 className="text-3xl md:text-4xl font-bold brand-title">Featured Products</h2>
+    <section className={`border-t border-black/10 bg-white px-4 py-14 sm:py-16 ${className}`}>
+      <div className="mx-auto max-w-6xl">
+        <div className={`mb-8 flex flex-col gap-4 ${centered ? "items-center text-center" : "sm:flex-row sm:items-end sm:justify-between"}`}>
+          <div className="max-w-2xl">
+            {kicker ? (
+              <p className="text-xs font-bold uppercase tracking-[0.18em] text-[var(--brand-cyan)]">
+                {kicker}
+              </p>
+            ) : null}
+            <h2 className={`${kicker ? "mt-2" : ""} text-2xl font-bold brand-title md:text-3xl`}>{title}</h2>
+            {description ? (
+              <p className="mt-3 text-sm leading-6 text-black/60 sm:text-base">{description}</p>
+            ) : null}
           </div>
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              aria-label="Previous products"
-              onClick={() => setIndex((prev) => Math.max(0, prev - 1))}
-              disabled={!canMovePrev}
-              className="h-10 w-10 rounded-full border border-black/20 text-black/80 disabled:opacity-30 transition hover:text-[var(--brand-cyan)] hover:border-[var(--brand-cyan)]"
+          {showBrowseLink ? (
+            <Link
+              href="/products"
+              className="inline-flex w-full items-center justify-center rounded-xl border border-black/15 bg-white px-4 py-3 text-sm font-bold text-black transition hover:border-[var(--brand-cyan)] hover:text-[var(--brand-cyan)] sm:w-auto"
             >
-              <ChevronLeft className="mx-auto h-5 w-5" />
-            </button>
-            <button
-              type="button"
-              aria-label="Next products"
-              onClick={() => setIndex((prev) => Math.min(maxIndex, prev + 1))}
-              disabled={!canMoveNext}
-              className="h-10 w-10 rounded-full border border-black/20 text-black/80 disabled:opacity-30 transition hover:text-[var(--brand-cyan)] hover:border-[var(--brand-cyan)]"
-            >
-              <ChevronRight className="mx-auto h-5 w-5" />
-            </button>
-          </div>
+              Browse all products
+            </Link>
+          ) : null}
         </div>
 
         {isLoading ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            {Array.from({ length: 4 }).map((_, i) => (
-              <div key={i} className="h-72 rounded-2xl bg-cyan-50 border border-black/10 animate-pulse" />
+          <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
+            {Array.from({ length: 4 }).map((_, index) => (
+              <div key={index} className="h-80 animate-pulse rounded-2xl border border-black/10 bg-cyan-50/45" />
+            ))}
+          </div>
+        ) : products.length > 0 ? (
+          <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
+            {products.map((product) => (
+              <ProductCard
+                key={product.id}
+                product={product}
+                href={getConsumableProductHref(product)}
+                onAddToCart={(item, imageUrl) =>
+                  addToCart({
+                    id: item.id,
+                    name: item.name,
+                    price: item.price,
+                    imageUrl,
+                  })
+                }
+                onBuyNow={(item, imageUrl) => {
+                  addToCart({
+                    id: item.id,
+                    name: item.name,
+                    price: item.price,
+                    imageUrl,
+                  });
+                  router.push("/checkout");
+                }}
+              />
             ))}
           </div>
         ) : (
-          <div className="overflow-hidden">
-            <div
-              className="flex transition-transform duration-500 ease-out"
-              style={{ transform: `translateX(-${translatePercent}%)` }}
-            >
-              {products.map((product) => {
-                const image = product.images?.find((img) => img.isPrimary) ?? product.images?.[0];
-                const imageUrl = image?.url ?? getProductImagePlaceholderUrl();
-                return (
-                  <article
-                    key={product.id}
-                    className="px-2 shrink-0"
-                    style={{ width: `${100 / itemsPerView}%` }}
-                  >
-                    <div className="h-full rounded-2xl brand-surface p-3 sm:p-4 flex flex-col gap-3">
-                      <Link href={`/products/${product.id}`} className="group">
-                        <div className="aspect-[4/3] overflow-hidden rounded-xl bg-cyan-50 border border-black/10">
-                          {/* eslint-disable-next-line @next/next/no-img-element */}
-                          <img
-                            src={imageUrl}
-                            alt={product.name}
-                            className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-300"
-                          />
-                        </div>
-                      </Link>
-                      <Link href={`/products/${product.id}`} className="space-y-1">
-                        <h3 className="text-sm sm:text-base font-semibold text-black line-clamp-2">{product.name}</h3>
-                        <p className="text-sm text-black/80">
-                          {product.price != null ? `£${Number(product.price).toFixed(2)}` : "POA"}
-                        </p>
-                      </Link>
-                      <div className="grid grid-cols-1 gap-2">
-                        <button
-                          type="button"
-                          className="brand-button rounded-lg py-2.5 text-sm"
-                          onClick={() =>
-                            addToCart({
-                              id: product.id,
-                              name: product.name,
-                              price: product.price,
-                              imageUrl,
-                            })
-                          }
-                        >
-                          Add to Cart
-                        </button>
-                        <button
-                          type="button"
-                          className="rounded-lg border border-black/25 bg-white py-2.5 text-sm font-semibold text-black transition hover:border-[var(--brand-cyan)] hover:text-[var(--brand-cyan)]"
-                          onClick={() => {
-                            buyNow({
-                              id: product.id,
-                              name: product.name,
-                              price: product.price,
-                              imageUrl,
-                            });
-                            router.push("/checkout");
-                          }}
-                        >
-                          Buy Now
-                        </button>
-                      </div>
-                    </div>
-                  </article>
-                );
-              })}
-            </div>
+          <div className="mx-auto max-w-md rounded-2xl border border-black/10 bg-white p-8 text-center">
+            <p className="font-semibold text-black">No featured products yet</p>
+            <p className="mt-2 text-sm leading-relaxed text-black/55">
+              Featured products selected in admin will appear here.
+            </p>
           </div>
         )}
       </div>

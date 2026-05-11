@@ -1,9 +1,19 @@
 import type { Pool, PoolClient } from "pg";
 import { pool, query, withTransaction } from "@/lib/db";
+import {
+  CONSUMABLE_CATEGORY_SLUGS,
+  PRODUCT_CATEGORY_SEEDS,
+  getConsumableTypeSlugsForGroup,
+  getConsumablesSlugs,
+  getPartsBrandBySlug,
+  getPartsLeafCategory,
+  getPartsTypeBySlug,
+} from "@/lib/product-taxonomy";
 
 type DbExecutor = Pick<Pool, "query"> | PoolClient;
 
 export type ProductStatus = "draft" | "active" | "archived";
+export type ProductVisibility = "public" | "dealer" | "both";
 
 export interface CategorySummary {
   id: number;
@@ -25,6 +35,7 @@ export interface ProductImageRecord {
   url: string;
   key: string;
   isPrimary: boolean;
+  order: number;
   createdAt: Date;
 }
 
@@ -34,13 +45,55 @@ export interface ProductRecord {
   description: string | null;
   url: string | null;
   price: number | null;
+  dealerPrice: number | null;
+  dealerNotes: string | null;
+  visibility: ProductVisibility;
   status: string;
+  isFeatured: boolean;
+  featuredOrder: number | null;
   tags: string | null;
   categoryId: number | null;
   createdAt: Date;
   updatedAt: Date;
   images: ProductImageRecord[];
   category: CategorySummary | null;
+}
+
+// Public-safe product type (excludes dealer fields)
+export interface PublicProductRecord {
+  id: number;
+  name: string;
+  description: string | null;
+  url: string | null;
+  price: number | null;
+  status: string;
+  isFeatured: boolean;
+  featuredOrder: number | null;
+  tags: string | null;
+  categoryId: number | null;
+  createdAt: Date;
+  updatedAt: Date;
+  images: ProductImageRecord[];
+  category: CategorySummary | null;
+}
+
+export function filterPublicProduct(product: ProductRecord): PublicProductRecord {
+  return {
+    id: product.id,
+    name: product.name,
+    description: product.description,
+    url: product.url,
+    price: product.price,
+    status: product.status,
+    isFeatured: product.isFeatured,
+    featuredOrder: product.featuredOrder,
+    tags: product.tags,
+    categoryId: product.categoryId,
+    createdAt: product.createdAt,
+    updatedAt: product.updatedAt,
+    images: product.images,
+    category: product.category,
+  };
 }
 
 export interface ProductListResult {
@@ -82,9 +135,15 @@ export interface ProductListFilters {
   page: number;
   limit: number;
   status?: string;
+  isFeatured?: boolean;
   search?: string;
   categoryId?: number;
   slug?: string;
+  slugs?: string[];
+  consumableGroup?: string;
+  consumableBrand?: string;
+  consumableType?: string;
+  allowedVisibilities?: ProductVisibility[];
 }
 
 export interface CreateProductInput {
@@ -92,7 +151,11 @@ export interface CreateProductInput {
   description?: string | null;
   url?: string | null;
   price?: number | null;
+  dealerPrice?: number | null;
+  dealerNotes?: string | null;
+  visibility?: ProductVisibility;
   status: ProductStatus;
+  isFeatured?: boolean;
   tags?: string | null;
   categoryId?: number | null;
   images: ProductInputImage[];
@@ -103,7 +166,11 @@ export interface UpdateProductInput {
   description?: string | null;
   url?: string | null;
   price?: number | null;
+  dealerPrice?: number | null;
+  dealerNotes?: string | null;
+  visibility?: ProductVisibility;
   status?: string;
+  isFeatured?: boolean;
   tags?: string | null;
   categoryId?: number | null;
   images?: ProductInputImage[];
@@ -124,13 +191,24 @@ interface ProductRow {
   description: string | null;
   url: string | null;
   price: number | null;
+  dealerPrice: number | null;
+  dealerNotes: string | null;
+  visibility: ProductVisibility;
   status: string;
+  isFeatured: boolean;
+  featuredOrder: number | null;
   tags: string | null;
   categoryId: number | null;
   createdAt: Date;
   updatedAt: Date;
   category: CategorySummary | null;
   images: ProductImageRecord[] | null;
+}
+
+function normalizeProductVisibility(value: unknown): ProductVisibility {
+  if (value === "dealer") return "dealer";
+  if (value === "both" || value === "public_and_dealer") return "both";
+  return "public";
 }
 
 function normalizeImages<T extends { isPrimary?: boolean | null }>(
@@ -158,7 +236,12 @@ function mapProductRow(row: ProductRow): ProductRecord {
     description: row.description,
     url: row.url,
     price: row.price == null ? null : Number(row.price),
+    dealerPrice: row.dealerPrice == null ? null : Number(row.dealerPrice),
+    dealerNotes: row.dealerNotes,
+    visibility: normalizeProductVisibility(row.visibility),
     status: row.status,
+    isFeatured: row.isFeatured,
+    featuredOrder: row.featuredOrder,
     tags: row.tags,
     categoryId: row.categoryId,
     createdAt: new Date(row.createdAt),
@@ -171,6 +254,7 @@ function mapProductRow(row: ProductRow): ProductRecord {
           url: image.url,
           key: image.key,
           isPrimary: image.isPrimary,
+          order: "order" in image && typeof image.order === "number" ? image.order : 0,
           createdAt: new Date(image.createdAt),
         }))
       : [],
@@ -188,6 +272,11 @@ function buildProductWhereClause(
     conditions.push(`p."status" = $${params.length}`);
   }
 
+  if (typeof filters.isFeatured === "boolean") {
+    params.push(filters.isFeatured);
+    conditions.push(`p."isFeatured" = $${params.length}`);
+  }
+
   if (typeof filters.categoryId === "number") {
     params.push(filters.categoryId);
     conditions.push(`p."categoryId" = $${params.length}`);
@@ -198,12 +287,78 @@ function buildProductWhereClause(
     conditions.push(`c."slug" = $${params.length}`);
   }
 
+  if (filters.slugs && filters.slugs.length > 0) {
+    params.push(filters.slugs);
+    conditions.push(`c."slug" = ANY($${params.length})`);
+  }
+
+  const consumableTypeSlugs = filters.consumableType
+    ? getConsumableTypeSlugsForGroup(filters.consumableType).length > 0
+      ? getConsumableTypeSlugsForGroup(filters.consumableType)
+      : getPartsTypeBySlug(filters.consumableType)
+        ? [filters.consumableType]
+        : []
+    : filters.consumableGroup
+      ? getConsumableTypeSlugsForGroup(filters.consumableGroup)
+      : [];
+
+  const consumableBrand = getPartsBrandBySlug(filters.consumableBrand);
+
+  if (consumableBrand || consumableTypeSlugs.length > 0) {
+    const exactLeafSlugs = consumableBrand
+      ? (consumableTypeSlugs.length > 0
+        ? consumableTypeSlugs
+            .map((typeSlug) => getPartsLeafCategory(consumableBrand.slug, typeSlug)?.slug)
+            .filter((slug): slug is string => Boolean(slug))
+        : getConsumablesSlugs(consumableBrand.slug))
+      : consumableTypeSlugs.flatMap((typeSlug) => getConsumablesSlugs(null, typeSlug));
+
+    const legacyConsumableSlugs = [
+      "consumables",
+      "parts-and-toner",
+      ...consumableTypeSlugs,
+    ];
+    params.push(exactLeafSlugs);
+    const exactLeafSlugIndex = params.length;
+    params.push(legacyConsumableSlugs);
+    const legacySlugIndex = params.length;
+    const typeKeywordConditions = consumableTypeSlugs.length > 0
+      ? buildConsumableKeywordConditions(consumableTypeSlugs, "p.\"name\"", "p.\"name\"", params)
+      : "TRUE";
+    const typeExclusionConditions = consumableTypeSlugs.length > 0
+      ? buildConsumableTypeExclusionConditions(consumableTypeSlugs, "p.\"name\"", params)
+      : "TRUE";
+    const brandKeywordConditions = consumableBrand
+      ? buildConsumableBrandKeywordConditions(consumableBrand.slug, "p.\"name\"", "p.\"tags\"", params)
+      : "TRUE";
+
+    conditions.push(
+      `(
+        c."slug" = ANY($${exactLeafSlugIndex})
+        OR (
+          c."slug" = ANY($${legacySlugIndex})
+          AND (${brandKeywordConditions})
+          AND (${typeKeywordConditions})
+          AND (${typeExclusionConditions})
+        )
+      )`,
+    );
+  } else if (filters.consumableGroup === "all" || filters.consumableType === "all") {
+    params.push(CONSUMABLE_CATEGORY_SLUGS);
+    conditions.push(`c."slug" = ANY($${params.length})`);
+  }
+
   if (filters.search) {
     params.push(`%${filters.search}%`);
     const tokenIndex = params.length;
     conditions.push(
       `(p."name" ILIKE $${tokenIndex} OR p."description" ILIKE $${tokenIndex} OR p."tags" ILIKE $${tokenIndex})`,
     );
+  }
+
+  if (filters.allowedVisibilities && filters.allowedVisibilities.length > 0) {
+    params.push(filters.allowedVisibilities);
+    conditions.push(`p."visibility" = ANY($${params.length})`);
   }
 
   if (conditions.length === 0) {
@@ -213,10 +368,97 @@ function buildProductWhereClause(
   return `WHERE ${conditions.join(" AND ")}`;
 }
 
+function buildConsumableKeywordConditions(
+  slugs: string[],
+  nameColumn: string,
+  tagsColumn: string,
+  params: unknown[],
+) {
+  const keywordMap: Record<string, string[]> = {
+    toner: ["toner", "toner cartridge"],
+    "waste-toner-bottles": ["waste toner", "waste bottle", "waste toner bottle"],
+    parts: ["part", "parts", "fuser", "fusing", "belt", "roller", "unit", "screen", "hdd", "ssd", "charge"],
+    "drum-units": ["drum", "pcu", "pcdu", "photoconductor", "developer unit"],
+    staples: ["staple", "staples"],
+  };
+  const keywords = Array.from(new Set(slugs.flatMap((slug) => keywordMap[slug] ?? [slug])));
+
+  if (keywords.length === 0) {
+    params.push("%__no_consumable_match__%");
+    return `${nameColumn} ILIKE $${params.length}`;
+  }
+
+  return keywords
+    .map((keyword) => {
+      params.push(`%${keyword}%`);
+      const index = params.length;
+      return `(${nameColumn} ILIKE $${index} OR ${tagsColumn} ILIKE $${index})`;
+    })
+    .join(" OR ");
+}
+
+function buildConsumableTypeExclusionConditions(
+  slugs: string[],
+  nameColumn: string,
+  params: unknown[],
+) {
+  const conflictMap: Record<string, string[]> = {
+    toner: ["waste toner", "waste bottle", "drum", "staple", "part", "fuser", "roller"],
+    "waste-toner-bottles": ["drum", "staple", "fuser", "roller"],
+    parts: ["toner", "waste toner", "drum", "staple"],
+    "drum-units": ["waste toner", "waste bottle", "staple", "toner cartridge"],
+    staples: ["toner", "waste toner", "drum", "fuser", "roller"],
+  };
+  const conflicts = Array.from(new Set(slugs.flatMap((slug) => conflictMap[slug] ?? [])));
+
+  if (conflicts.length === 0) {
+    return "TRUE";
+  }
+
+  return conflicts
+    .map((keyword) => {
+      params.push(`%${keyword}%`);
+      const index = params.length;
+      return `${nameColumn} NOT ILIKE $${index}`;
+    })
+    .join(" AND ");
+}
+
+function buildConsumableBrandKeywordConditions(
+  brandSlug: string,
+  nameColumn: string,
+  tagsColumn: string,
+  params: unknown[],
+) {
+  const keywordMap: Record<string, string[]> = {
+    canon: ["canon"],
+    ricoh: ["ricoh"],
+    konica: ["konica", "minolta", "bizhub"],
+  };
+  const keywords = keywordMap[brandSlug] ?? [brandSlug];
+
+  return keywords
+    .map((keyword) => {
+      params.push(`%${keyword}%`);
+      const index = params.length;
+      return `(${nameColumn} ILIKE $${index} OR ${tagsColumn} ILIKE $${index})`;
+    })
+    .join(" OR ");
+}
+
 async function getProductByIdWithExecutor(
   productId: number,
   executor: DbExecutor = pool,
+  options: { allowedVisibilities?: ProductVisibility[] } = {},
 ) {
+  const params: unknown[] = [productId];
+  const where: string[] = [`p."id" = $1`];
+
+  if (options.allowedVisibilities && options.allowedVisibilities.length > 0) {
+    params.push(options.allowedVisibilities);
+    where.push(`p."visibility" = ANY($${params.length})`);
+  }
+
   const result = await executor.query<ProductRow>(
     `
       SELECT
@@ -225,7 +467,12 @@ async function getProductByIdWithExecutor(
         p."description",
         p."url",
         p."price",
+        p."dealerPrice",
+        p."dealerNotes",
+        p."visibility",
         p."status",
+        p."isFeatured",
+        p."featuredOrder",
         p."tags",
         p."categoryId" AS "categoryId",
         p."createdAt" AS "createdAt",
@@ -247,9 +494,10 @@ async function getProductByIdWithExecutor(
                 'url', pi."url",
                 'key', pi."key",
                 'isPrimary', pi."isPrimary",
+                'order', pi."order",
                 'createdAt', pi."createdAt"
               )
-              ORDER BY pi."isPrimary" DESC, pi."createdAt" ASC, pi."id" ASC
+              ORDER BY pi."order" ASC, pi."isPrimary" DESC, pi."createdAt" ASC, pi."id" ASC
             )
             FROM "ProductImage" pi
             WHERE pi."productId" = p."id"
@@ -259,10 +507,10 @@ async function getProductByIdWithExecutor(
       FROM "Product" p
       LEFT JOIN "Category" c
         ON c."id" = p."categoryId"
-      WHERE p."id" = $1
+      WHERE ${where.join(" AND ")}
       LIMIT 1
     `,
-    [productId],
+    params,
   );
 
   const row = result.rows[0];
@@ -282,22 +530,25 @@ async function insertProductImages(
 
   const values: unknown[] = [];
   const placeholders = normalizedImages.map((image, index) => {
-    const offset = index * 4;
-    values.push(productId, image.url, image.key, image.isPrimary);
-    return `($${offset + 1}, $${offset + 2}, $${offset + 3}, $${offset + 4})`;
+    const offset = index * 5;
+    values.push(productId, image.url, image.key, image.isPrimary, index);
+    return `($${offset + 1}, $${offset + 2}, $${offset + 3}, $${offset + 4}, $${offset + 5})`;
   });
 
   await executor.query(
     `
-      INSERT INTO "ProductImage" ("productId", "url", "key", "isPrimary")
+      INSERT INTO "ProductImage" ("productId", "url", "key", "isPrimary", "order")
       VALUES ${placeholders.join(", ")}
     `,
     values,
   );
 }
 
-export async function getProductById(productId: number) {
-  return getProductByIdWithExecutor(productId, pool);
+export async function getProductById(
+  productId: number,
+  options: { allowedVisibilities?: ProductVisibility[] } = {},
+) {
+  return getProductByIdWithExecutor(productId, pool, options);
 }
 
 export async function listProducts(filters: ProductListFilters): Promise<ProductListResult> {
@@ -313,7 +564,12 @@ export async function listProducts(filters: ProductListFilters): Promise<Product
           p."description",
           p."url",
           p."price",
+          p."dealerPrice",
+          p."dealerNotes",
+          p."visibility",
           p."status",
+          p."isFeatured",
+          p."featuredOrder",
           p."tags",
           p."categoryId" AS "categoryId",
           p."createdAt" AS "createdAt",
@@ -335,9 +591,10 @@ export async function listProducts(filters: ProductListFilters): Promise<Product
                   'url', pi."url",
                   'key', pi."key",
                   'isPrimary', pi."isPrimary",
+                  'order', pi."order",
                   'createdAt', pi."createdAt"
                 )
-                ORDER BY pi."isPrimary" DESC, pi."createdAt" ASC, pi."id" ASC
+                ORDER BY pi."order" ASC, pi."isPrimary" DESC, pi."createdAt" ASC, pi."id" ASC
               )
               FROM "ProductImage" pi
               WHERE pi."productId" = p."id"
@@ -348,7 +605,11 @@ export async function listProducts(filters: ProductListFilters): Promise<Product
         LEFT JOIN "Category" c
           ON c."id" = p."categoryId"
         ${whereClause}
-        ORDER BY p."createdAt" DESC
+        ORDER BY ${
+          filters.isFeatured
+            ? `COALESCE(p."featuredOrder", 999999) ASC, p."createdAt" DESC`
+            : `p."createdAt" DESC`
+        }
         LIMIT $${baseParams.length + 1}
         OFFSET $${baseParams.length + 2}
       `,
@@ -381,12 +642,16 @@ export async function createProduct(input: CreateProductInput) {
           "description",
           "url",
           "price",
+          "dealerPrice",
+          "dealerNotes",
+          "visibility",
           "status",
+          "isFeatured",
           "tags",
           "categoryId",
           "updatedAt"
         )
-        VALUES ($1, $2, $3, $4, $5, $6, $7, NOW())
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, NOW())
         RETURNING "id"
       `,
       [
@@ -394,7 +659,11 @@ export async function createProduct(input: CreateProductInput) {
         input.description ?? null,
         input.url ?? null,
         input.price ?? null,
+        input.dealerPrice ?? null,
+        input.dealerNotes ?? null,
+        input.visibility ?? "public",
         input.status,
+        input.isFeatured ?? false,
         input.tags ?? null,
         input.categoryId ?? null,
       ],
@@ -426,13 +695,14 @@ export async function updateProduct(productId: number, input: UpdateProductInput
       url: string;
       key: string;
       isPrimary: boolean;
+      order: number;
       createdAt: Date;
     }>(
       `
-        SELECT "id", "url", "key", "isPrimary", "createdAt" AS "createdAt"
+        SELECT "id", "url", "key", "isPrimary", "order", "createdAt" AS "createdAt"
         FROM "ProductImage"
         WHERE "productId" = $1
-        ORDER BY "isPrimary" DESC, "createdAt" ASC, "id" ASC
+        ORDER BY "order" ASC, "isPrimary" DESC, "createdAt" ASC, "id" ASC
       `,
       [productId],
     );
@@ -451,7 +721,14 @@ export async function updateProduct(productId: number, input: UpdateProductInput
     if (input.description !== undefined) assignField("description", input.description ?? null);
     if (input.url !== undefined) assignField("url", input.url ?? null);
     if (input.price !== undefined) assignField("price", input.price ?? null);
+    if (input.dealerPrice !== undefined) assignField("dealerPrice", input.dealerPrice ?? null);
+    if (input.dealerNotes !== undefined) assignField("dealerNotes", input.dealerNotes ?? null);
+    if (input.visibility !== undefined) assignField("visibility", input.visibility);
     if (input.status !== undefined) assignField("status", input.status);
+    if (input.isFeatured !== undefined) {
+      assignField("isFeatured", input.isFeatured);
+      if (!input.isFeatured) assignField("featuredOrder", null);
+    }
     if (input.tags !== undefined) assignField("tags", input.tags ?? null);
     if (input.categoryId !== undefined) assignField("categoryId", input.categoryId ?? null);
 
@@ -538,6 +815,43 @@ export async function updateProduct(productId: number, input: UpdateProductInput
   });
 }
 
+export async function updateProductFeaturedStatus(
+  productId: number,
+  input: { isFeatured: boolean; featuredOrder?: number | null },
+) {
+  const result = await query<ProductRow>(
+    `
+      UPDATE "Product"
+      SET
+        "isFeatured" = $2,
+        "featuredOrder" = $3,
+        "updatedAt" = NOW()
+      WHERE "id" = $1
+      RETURNING
+        "id",
+        "name",
+        "description",
+        "url",
+        "price",
+        "dealerPrice",
+        "dealerNotes",
+        "visibility",
+        "status",
+        "isFeatured",
+        "featuredOrder",
+        "tags",
+        "categoryId" AS "categoryId",
+        "createdAt" AS "createdAt",
+        "updatedAt" AS "updatedAt",
+        NULL::json AS "category",
+        '[]'::json AS "images"
+    `,
+    [productId, input.isFeatured, input.isFeatured ? input.featuredOrder ?? null : null],
+  );
+
+  return result.rows[0] ? mapProductRow(result.rows[0]) : null;
+}
+
 export async function deleteProduct(productId: number) {
   return withTransaction(async (client) => {
     const existingProduct = await client.query<{ id: number }>(
@@ -614,10 +928,21 @@ export async function createCategory(name: string, slug: string) {
 }
 
 export async function seedDefaultCategories() {
-  const defaults = [
-    { name: "Photocopiers", slug: "photocopiers" },
-    { name: "Consumables", slug: "consumables" },
-  ];
+  const defaults = PRODUCT_CATEGORY_SEEDS;
+
+  await query(
+    `
+      UPDATE "Category"
+      SET
+        "name" = 'Consumables',
+        "slug" = 'consumables',
+        "updatedAt" = NOW()
+      WHERE "slug" = 'parts-and-toner'
+        AND NOT EXISTS (
+          SELECT 1 FROM "Category" existing WHERE existing."slug" = 'consumables'
+        )
+    `,
+  );
 
   for (const category of defaults) {
     await query(
@@ -636,78 +961,79 @@ export async function seedDefaultCategories() {
 
 export async function getDashboardOverview(): Promise<DashboardOverview> {
   try {
-    const [countsResult, categoriesCountResult, recentProductsResult] = await Promise.all([
-      query<{
-        totalProducts: number;
-        activeProducts: number;
-        draftProducts: number;
-        archivedProducts: number;
-      }>(
-        `
-          SELECT
-            COUNT(*)::int AS "totalProducts",
-            COUNT(*) FILTER (WHERE "status" = 'active')::int AS "activeProducts",
-            COUNT(*) FILTER (WHERE "status" = 'draft')::int AS "draftProducts",
-            COUNT(*) FILTER (WHERE "status" = 'archived')::int AS "archivedProducts"
-          FROM "Product"
-        `,
-      ),
-      query<{ totalCategories: number }>(
-        `SELECT COUNT(*)::int AS "totalCategories" FROM "Category"`,
-      ),
-      query<ProductRow>(
-        `
-          SELECT
-            p."id",
-            p."name",
-            p."description",
-            p."url",
-            p."price",
-            p."status",
-            p."tags",
-            p."categoryId" AS "categoryId",
-            p."createdAt" AS "createdAt",
-            p."updatedAt" AS "updatedAt",
-            CASE
-              WHEN c."id" IS NULL THEN NULL
-              ELSE json_build_object(
-                'id', c."id",
-                'name', c."name",
-                'slug', c."slug"
+    const countsResult = await query<{
+      totalProducts: number;
+      activeProducts: number;
+      draftProducts: number;
+      archivedProducts: number;
+      totalCategories: number;
+    }>(`
+      SELECT
+        COUNT(*)::int AS "totalProducts",
+        COUNT(*) FILTER (WHERE "status" = 'active')::int AS "activeProducts",
+        COUNT(*) FILTER (WHERE "status" = 'draft')::int AS "draftProducts",
+        COUNT(*) FILTER (WHERE "status" = 'archived')::int AS "archivedProducts",
+        (SELECT COUNT(*)::int FROM "Category") AS "totalCategories"
+      FROM "Product"
+    `);
+
+    const recentProductsResult = await query<ProductRow>(`
+      SELECT
+        p."id",
+        p."name",
+        p."description",
+        p."url",
+        p."price",
+        p."dealerPrice",
+        p."dealerNotes",
+        p."visibility",
+        p."status",
+        p."isFeatured",
+        p."featuredOrder",
+        p."tags",
+        p."categoryId" AS "categoryId",
+        p."createdAt" AS "createdAt",
+        p."updatedAt" AS "updatedAt",
+        CASE
+          WHEN c."id" IS NULL THEN NULL
+          ELSE json_build_object(
+            'id', c."id",
+            'name', c."name",
+            'slug', c."slug"
+          )
+        END AS "category",
+        COALESCE(
+          (
+            SELECT json_agg(
+              json_build_object(
+                'id', pi."id",
+                'productId', pi."productId",
+                'url', pi."url",
+                'key', pi."key",
+                'isPrimary', pi."isPrimary",
+                'order', pi."order",
+                'createdAt', pi."createdAt"
               )
-            END AS "category",
-            COALESCE(
-              (
-                SELECT json_agg(
-                  json_build_object(
-                    'id', pi."id",
-                    'productId', pi."productId",
-                    'url', pi."url",
-                    'key', pi."key",
-                    'isPrimary', pi."isPrimary",
-                    'createdAt', pi."createdAt"
-                  )
-                  ORDER BY pi."isPrimary" DESC, pi."createdAt" ASC, pi."id" ASC
-                )
-                FROM "ProductImage" pi
-                WHERE pi."productId" = p."id"
-              ),
-              '[]'::json
-            ) AS "images"
-          FROM "Product" p
-          LEFT JOIN "Category" c
-            ON c."id" = p."categoryId"
-          ORDER BY p."updatedAt" DESC
-          LIMIT 4
-        `,
-      ),
-    ]);
+              ORDER BY pi."order" ASC, pi."isPrimary" DESC, pi."createdAt" ASC, pi."id" ASC
+            )
+            FROM "ProductImage" pi
+            WHERE pi."productId" = p."id"
+          ),
+          '[]'::json
+        ) AS "images"
+      FROM "Product" p
+      LEFT JOIN "Category" c
+        ON c."id" = p."categoryId"
+      ORDER BY p."updatedAt" DESC
+      LIMIT 4
+    `);
 
     const counts = countsResult.rows[0] ?? {
       totalProducts: 0,
       activeProducts: 0,
       draftProducts: 0,
       archivedProducts: 0,
+      totalCategories: 0,
     };
 
     return {
@@ -715,11 +1041,11 @@ export async function getDashboardOverview(): Promise<DashboardOverview> {
       activeProducts: counts.activeProducts,
       draftProducts: counts.draftProducts,
       archivedProducts: counts.archivedProducts,
-      totalCategories: categoriesCountResult.rows[0]?.totalCategories ?? 0,
+      totalCategories: counts.totalCategories,
       recentProducts: recentProductsResult.rows.map(mapProductRow),
     };
   } catch (error) {
-    console.error("[catalog-store] Failed to load dashboard overview", error);
+    console.warn("[catalog-store] Failed to load dashboard overview", error);
     return {
       totalProducts: 0,
       activeProducts: 0,
@@ -732,80 +1058,66 @@ export async function getDashboardOverview(): Promise<DashboardOverview> {
 }
 
 export async function getDashboardNotificationSummary(): Promise<DashboardNotificationSummary> {
-  const [
-    countsResult,
-    uncategorizedCountResult,
-    uncategorizedProductsResult,
-    productsWithoutImagesCountResult,
-    productsWithoutImagesResult,
-  ] = await Promise.all([
-    query<{
+  const countsResult = await query<{
       totalProducts: number;
       draftProducts: number;
+      uncategorizedCount: number;
+      productsWithoutImagesCount: number;
     }>(
       `
         SELECT
           COUNT(*)::int AS "totalProducts",
-          COUNT(*) FILTER (WHERE "status" = 'draft')::int AS "draftProducts"
-        FROM "Product"
-      `,
-    ),
-    query<{ uncategorizedCount: number }>(
-      `
-        SELECT COUNT(*)::int AS "uncategorizedCount"
-        FROM "Product"
-        WHERE "categoryId" IS NULL
-      `,
-    ),
-    query<DashboardIssueProduct>(
-      `
-        SELECT
-          "id",
-          "name",
-          "updatedAt" AS "updatedAt"
-        FROM "Product"
-        WHERE "categoryId" IS NULL
-        ORDER BY "updatedAt" DESC, "id" DESC
-        LIMIT 3
-      `,
-    ),
-    query<{ productsWithoutImagesCount: number }>(
-      `
-        SELECT COUNT(*)::int AS "productsWithoutImagesCount"
+          COUNT(*) FILTER (WHERE "status" = 'draft')::int AS "draftProducts",
+          COUNT(*) FILTER (WHERE "categoryId" IS NULL)::int AS "uncategorizedCount",
+          COUNT(*) FILTER (
+            WHERE NOT EXISTS (
+              SELECT 1
+              FROM "ProductImage" pi
+              WHERE pi."productId" = p."id"
+            )
+          )::int AS "productsWithoutImagesCount"
         FROM "Product" p
-        WHERE NOT EXISTS (
-          SELECT 1
-          FROM "ProductImage" pi
-          WHERE pi."productId" = p."id"
-        )
       `,
-    ),
-    query<DashboardIssueProduct>(
-      `
-        SELECT
-          p."id",
-          p."name",
-          p."updatedAt" AS "updatedAt"
-        FROM "Product" p
-        WHERE NOT EXISTS (
-          SELECT 1
-          FROM "ProductImage" pi
-          WHERE pi."productId" = p."id"
-        )
-        ORDER BY p."updatedAt" DESC, p."id" DESC
-        LIMIT 3
-      `,
-    ),
-  ]);
+    );
+
+  const uncategorizedProductsResult = await query<DashboardIssueProduct>(
+    `
+      SELECT
+        "id",
+        "name",
+        "updatedAt" AS "updatedAt"
+      FROM "Product"
+      WHERE "categoryId" IS NULL
+      ORDER BY "updatedAt" DESC, "id" DESC
+      LIMIT 3
+    `,
+  );
+
+  const productsWithoutImagesResult = await query<DashboardIssueProduct>(
+    `
+      SELECT
+        p."id",
+        p."name",
+        p."updatedAt" AS "updatedAt"
+      FROM "Product" p
+      WHERE NOT EXISTS (
+        SELECT 1
+        FROM "ProductImage" pi
+        WHERE pi."productId" = p."id"
+      )
+      ORDER BY p."updatedAt" DESC, p."id" DESC
+      LIMIT 3
+    `,
+  );
 
   return {
     totalProducts: countsResult.rows[0]?.totalProducts ?? 0,
     draftProducts: countsResult.rows[0]?.draftProducts ?? 0,
     uncategorizedProducts: uncategorizedProductsResult.rows,
-    uncategorizedCount: uncategorizedCountResult.rows[0]?.uncategorizedCount ?? 0,
+    uncategorizedCount: countsResult.rows[0]?.uncategorizedCount ?? 0,
     productsWithoutImages: productsWithoutImagesResult.rows,
     productsWithoutImagesCount:
-      productsWithoutImagesCountResult.rows[0]?.productsWithoutImagesCount ?? 0,
+      countsResult.rows[0]?.productsWithoutImagesCount ?? 0,
   };
 }
 
@@ -861,3 +1173,5 @@ export async function updateProductImageStorageLink(
     [payload.key, payload.url, imageId],
   );
 }
+
+

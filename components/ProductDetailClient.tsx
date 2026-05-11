@@ -1,20 +1,54 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { ChevronLeft, ChevronRight, PhoneCall, Mail, ImageOff, Loader2, Calendar, ExternalLink } from "lucide-react";
+import Link from "next/link";
+import {
+  ChevronLeft,
+  ChevronRight,
+  ImageOff,
+  Loader2,
+  Mail,
+  Minus,
+  PhoneCall,
+  Plus,
+  ShoppingCart,
+} from "lucide-react";
 import { HeicImage } from "@/components/HeicImage";
 import NavBar from "@/components/Navbar";
+import FeaturedProductsSection from "@/components/FeaturedProductsSection";
 import { getProductImagePlaceholderUrl } from "@/lib/product-image-placeholder";
 import { safeReadJsonResponse } from "@/lib/safe-json";
 import { useCart } from "@/components/CartProvider";
+import {
+  getPartsBrandBySlug,
+  getPartsLeafCategoryBySlug,
+  getPartsTypeBySlug,
+  getProductCategoryPath,
+} from "@/lib/product-taxonomy";
 
-interface ProductImage { id: number; url: string; isPrimary: boolean; }
-interface Category { id: number; name: string; slug: string; }
+interface ProductImage {
+  id: number;
+  url: string;
+  isPrimary: boolean;
+}
+
+interface Category {
+  id: number;
+  name: string;
+  slug: string;
+}
+
 interface Product {
-  id: number; name: string; description: string | null;
-  url: string | null; price: number | null; tags: string | null; status: string;
-  createdAt: string; images: ProductImage[];
+  id: number;
+  name: string;
+  description: string | null;
+  url: string | null;
+  price: number | null;
+  tags: string | null;
+  status: string;
+  createdAt: string;
+  images: ProductImage[];
   category: Category | null;
 }
 
@@ -24,275 +58,374 @@ const PLACEHOLDER_IMAGE: ProductImage = {
   isPrimary: true,
 };
 
+function formatPrice(value: number | null | undefined) {
+  return typeof value === "number" ? `\u00a3${value.toFixed(2)}` : "Price on application";
+}
+
 function RichText({ text }: { text: string }) {
   const urlRegex = /(https?:\/\/[^\s]+)/g;
   const parts = text.split(urlRegex);
   return (
     <>
-      {parts.map((part, i) =>
+      {parts.map((part, index) =>
         urlRegex.test(part) ? (
-          <a key={i} href={part} target="_blank" rel="noopener noreferrer"
-            className="text-[var(--brand-cyan)] hover:text-[var(--brand-cyan)] underline underline-offset-2 break-all transition-colors">
+          <a
+            key={index}
+            href={part}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="break-all text-[var(--brand-cyan)] underline underline-offset-2 transition-colors"
+          >
             {part}
           </a>
         ) : (
-          <span key={i}>{part}</span>
-        )
+          <span key={index}>{part}</span>
+        ),
       )}
     </>
   );
 }
 
-export default function ProductDetailPage() {
-  const { id } = useParams<{ id: string }>();
+export default function ProductDetailPage({
+  productId,
+  breadcrumbContext,
+}: {
+  productId?: string;
+  breadcrumbContext?: { brandSlug: string; typeSlug: string };
+} = {}) {
+  const params = useParams<{ id?: string }>();
+  const id = productId ?? params.id;
   const router = useRouter();
   const [product, setProduct] = useState<Product | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [activeImg, setActiveImg] = useState(0);
+  const [quantity, setQuantity] = useState(1);
   const [lightbox, setLightbox] = useState(false);
+  const thumbnailRailRef = useRef<HTMLDivElement | null>(null);
   const { addToCart } = useCart();
 
   useEffect(() => {
     void (async () => {
       try {
-        const response = await fetch(`/api/product/${id}`);
+        if (!id) throw new Error("Product not found");
+        const response = await fetch(`/api/product/${id}?public=1`);
         const data = await safeReadJsonResponse<{ data?: Product; error?: string }>(
           response,
-          "ProductDetailClient load product"
+          "ProductDetailClient load product",
         );
-        if (!response.ok) {
-          throw new Error(data?.error || "Failed to load product");
-        }
-        if (!data?.data) {
-          throw new Error("Product not found");
+        if (!response.ok || !data?.data) {
+          throw new Error(data?.error || "Product not found");
         }
         setProduct(data.data);
-      } catch (error) {
-        setError(error instanceof Error ? error.message : "Failed to load product");
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Failed to load product");
       } finally {
         setLoading(false);
       }
     })();
   }, [id]);
 
-  // Keyboard nav for lightbox
   useEffect(() => {
     if (!lightbox || !product) return;
-    const handler = (e: KeyboardEvent) => {
-      if (e.key === "ArrowRight") setActiveImg((i) => (i + 1) % product.images.length);
-      if (e.key === "ArrowLeft") setActiveImg((i) => (i - 1 + product.images.length) % product.images.length);
-      if (e.key === "Escape") setLightbox(false);
+    const images = product.images.length > 0 ? product.images : [PLACEHOLDER_IMAGE];
+    const handler = (event: KeyboardEvent) => {
+      if (event.key === "ArrowRight") setActiveImg((current) => (current + 1) % images.length);
+      if (event.key === "ArrowLeft") setActiveImg((current) => (current - 1 + images.length) % images.length);
+      if (event.key === "Escape") setLightbox(false);
     };
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
   }, [lightbox, product]);
 
-  if (loading) return (
-    <div className="min-h-screen bg-white flex items-center justify-center">
-      <Loader2 className="w-8 h-8 text-black/30 animate-spin" />
-    </div>
-  );
+  if (loading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-white">
+        <Loader2 className="h-8 w-8 animate-spin text-black/30" />
+      </div>
+    );
+  }
 
-  if (error || !product) return (
-    <div className="min-h-screen bg-white flex flex-col items-center justify-center gap-4">
-      <p className="text-black/50">{error || "Product not found"}</p>
-      <button onClick={() => router.back()} className="text-sm text-black/70 hover:text-[var(--brand-cyan)] underline">← Go back</button>
-    </div>
-  );
+  if (error || !product) {
+    return (
+      <div className="flex min-h-screen flex-col items-center justify-center gap-4 bg-white px-4 text-center">
+        <p className="text-black/55">{error || "Product not found"}</p>
+        <button
+          type="button"
+          onClick={() => router.back()}
+          className="text-sm text-black/70 underline transition hover:text-[var(--brand-cyan)]"
+        >
+          Go back
+        </button>
+      </div>
+    );
+  }
 
   const images = product.images.length > 0 ? product.images : [PLACEHOLDER_IMAGE];
   const currentImg = images[activeImg];
+  const categoryPath = getProductCategoryPath(product.category?.slug);
+  const leafCategory = getPartsLeafCategoryBySlug(product.category?.slug);
+  const breadcrumbBrand =
+    leafCategory ??
+    (breadcrumbContext
+      ? {
+          brandLabel: getPartsBrandBySlug(breadcrumbContext.brandSlug)?.label ?? breadcrumbContext.brandSlug,
+          brandSlug: breadcrumbContext.brandSlug,
+          typeLabel: getPartsTypeBySlug(breadcrumbContext.typeSlug)?.label ?? breadcrumbContext.typeSlug,
+          typeSlug: breadcrumbContext.typeSlug,
+        }
+      : null);
+
+  function showPreviousImage() {
+    setActiveImg((current) => (current - 1 + images.length) % images.length);
+    thumbnailRailRef.current?.scrollBy({ left: -96, behavior: "smooth" });
+  }
+
+  function showNextImage() {
+    setActiveImg((current) => (current + 1) % images.length);
+    thumbnailRailRef.current?.scrollBy({ left: 96, behavior: "smooth" });
+  }
+
+  function handleAddToCart() {
+    if (!product) return;
+    for (let index = 0; index < quantity; index += 1) {
+      addToCart({
+        id: product.id,
+        name: product.name,
+        price: product.price,
+        imageUrl: images[0]?.url,
+      });
+    }
+  }
 
   return (
-    <div className="min-h-screen bg-white text-black" style={{ fontFamily: "'DM Sans', sans-serif" }}>
+    <div className="min-h-screen bg-white text-black font-myriad">
       <NavBar />
 
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 py-8 lg:py-12">
-        <button
-          onClick={() => router.back()}
-          className="mb-6 flex items-center gap-1.5 text-sm text-black/50 hover:text-[var(--brand-cyan)] transition-colors"
-        >
-          <ChevronLeft className="w-4 h-4" /> Back
-        </button>
-
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12">
-
-          {/* ── Image gallery ── */}
-          <div className="space-y-3">
-            {/* Main image */}
-            <div
-              className="relative aspect-[4/3] rounded-2xl overflow-hidden bg-cyan-50 border border-black/10 cursor-zoom-in"
-              onClick={() => images.length > 0 && setLightbox(true)}
-            >
-              {currentImg ? (
-                <HeicImage
-                  src={currentImg.url}
-                  alt={product.name}
-                  className="w-full h-full object-contain"
-                  loading="eager"
-                />
-              ) : (
-                <div className="w-full h-full flex items-center justify-center">
-                  <ImageOff className="w-12 h-12 text-black/20" />
-                </div>
-              )}
-
-              {/* Nav arrows on main image */}
-              {images.length > 1 && (
-                <>
-                  <button onClick={(e) => { e.stopPropagation(); setActiveImg((i) => (i - 1 + images.length) % images.length); }}
-                    className="absolute left-3 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-white/90 border border-black/15 flex items-center justify-center hover:border-[var(--brand-cyan)] transition-all">
-                    <ChevronLeft className="w-4 h-4 text-black" />
-                  </button>
-                  <button onClick={(e) => { e.stopPropagation(); setActiveImg((i) => (i + 1) % images.length); }}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-white/90 border border-black/15 flex items-center justify-center hover:border-[var(--brand-cyan)] transition-all">
-                    <ChevronRight className="w-4 h-4 text-black" />
-                  </button>
-                  <div className="absolute bottom-3 left-1/2 -translate-x-1/2 bg-white/90 text-black/65 text-xs px-2.5 py-1 rounded-full border border-black/10">
-                    {activeImg + 1} / {images.length}
-                  </div>
-                </>
-              )}
-
-              {product.images.length > 0 && (
-                <div className="absolute top-3 right-3 bg-white/90 text-black/55 text-[10px] px-2 py-1 rounded-lg border border-black/10">
-                  Click to expand
-                </div>
-              )}
-            </div>
-
-            {/* Thumbnail strip */}
-            {product.images.length > 1 && (
-              <div className="flex gap-2 overflow-x-auto pb-1">
-                {images.map((img, i) => (
-                  <button key={img.id} onClick={() => setActiveImg(i)}
-                    className={`relative shrink-0 w-16 h-16 rounded-xl overflow-hidden border-2 transition-all ${i === activeImg ? "border-[var(--brand-cyan)]" : "border-transparent hover:border-black/20"
-                      }`}>
-                    <HeicImage src={img.url} alt={`Photo ${i + 1}`} className="w-full h-full object-cover" />
-                  </button>
-                ))}
-              </div>
+      <main className="bg-white">
+        <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6 lg:py-12">
+          <nav className="mb-8 flex flex-wrap items-center gap-2 text-sm text-black/55">
+            <Link href="/products" className="hover:text-[var(--brand-cyan)]">Products</Link>
+            <span>/</span>
+            {categoryPath.mainSlug === "consumables" ? (
+              <>
+                <Link href="/consumables" className="hover:text-[var(--brand-cyan)]">Consumables</Link>
+                {breadcrumbBrand ? (
+                  <>
+                    <span>/</span>
+                    <Link href={`/consumables/${breadcrumbBrand.brandSlug}`} className="hover:text-[var(--brand-cyan)]">
+                      {breadcrumbBrand.brandLabel}
+                    </Link>
+                    <span>/</span>
+                    <Link href={`/consumables/${breadcrumbBrand.brandSlug}/${breadcrumbBrand.typeSlug}`} className="hover:text-[var(--brand-cyan)]">
+                      {breadcrumbBrand.typeLabel}
+                    </Link>
+                  </>
+                ) : null}
+              </>
+            ) : (
+              <Link href="/products?category=photocopiers" className="hover:text-[var(--brand-cyan)]">Printers</Link>
             )}
-          </div>
-
-          {/* ── Product info ── */}
-          <div className="flex flex-col gap-6">
-
-            {/* Category badge */}
-            {product.category && (
-              <div className="inline-flex">
-                <span className="text-xs font-medium text-black/75 bg-cyan-50 border border-[var(--brand-cyan)]/40 px-3 py-1 rounded-full">
-                  {product.category.name}
-                </span>
-              </div>
-            )}
-
-            {/* Name + price */}
-            <div>
-              <h1 className="text-2xl sm:text-3xl font-bold brand-title leading-tight">{product.name}</h1>
-              <div className="mt-3">
-                {product.price != null ? (
-                  <span className="text-3xl font-bold text-black">£{Number(product.price).toFixed(2)}</span>
-                ) : (
-                  <span className="text-xl font-semibold text-black/50">Price on application</span>
-                )}
-              </div>
-            </div>
-
-            {/* Description */}
-            {product.description && (
-              <div className="brand-surface rounded-2xl p-5">
-                <h3 className="text-xs font-semibold text-black/45 uppercase tracking-widest mb-3">Description</h3>
-                <p className="text-sm text-black/75 leading-relaxed whitespace-pre-wrap"><RichText text={product.description} /></p>
-              </div>
-            )}
-
-            {/* Product URL */}
-            {product.url && (
-              <a href={product.url} target="_blank" rel="noopener noreferrer"
-                className="flex items-center gap-2.5 px-5 py-3.5 bg-white border border-black/10 rounded-2xl hover:bg-cyan-50 transition-colors group">
-                <ExternalLink className="w-4 h-4 text-[var(--brand-cyan)] shrink-0" />
-                <div className="min-w-0 flex-1">
-                  <p className="text-xs font-semibold text-black/45 uppercase tracking-widest">Product Link</p>
-                  <p className="text-sm text-[var(--brand-cyan)] group-hover:text-[var(--brand-cyan)] truncate transition-colors">{product.url}</p>
-                </div>
-              </a>
-            )}
-            {/* Meta */}
-            <div className="flex items-center gap-1.5 text-xs text-black/35">
-              <Calendar className="w-3.5 h-3.5" />
-              Listed {new Date(product.createdAt).toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" })}
-            </div>
-
-            {/* CTA */}
-            <div className="space-y-3 pt-2">
-              <button
-                type="button"
-                onClick={() =>
-                  addToCart({
-                    id: product.id,
-                    name: product.name,
-                    price: product.price,
-                    imageUrl: images[0]?.url,
-                  })
-                }
-                className="flex items-center justify-center gap-2 w-full py-3 brand-button text-sm rounded-xl active:scale-[0.98] transition-all"
+            <span>/</span>
+            <span className="text-black/80">{product.name}</span>
+          </nav>
+          <section className="grid grid-cols-1 gap-8 lg:grid-cols-[minmax(0,1.08fr)_minmax(380px,0.92fr)] lg:gap-10">
+            <div className="space-y-4">
+              <div
+                className="relative aspect-[4/3] cursor-zoom-in overflow-hidden rounded-2xl border border-black/10 bg-white"
+                onClick={() => setLightbox(true)}
               >
-                Add to Cart
-              </button>
-              <a href={`mailto:sales@buysupply.me?subject=Enquiry: ${encodeURIComponent(product.name)}&body=Hi, I'm interested in the ${encodeURIComponent(product.name)} (ID: ${product.id}). Please can you provide more information.`}
-                className="flex items-center justify-center gap-2 w-full py-3 rounded-xl border border-black/20 text-black text-sm font-semibold hover:border-[var(--brand-cyan)] hover:text-[var(--brand-cyan)] active:scale-[0.98] transition-all">
-                <Mail className="w-4 h-4 brand-icon" />
-                Enquire by Email
-              </a>
-              <a href="tel:01753971125"
-                className="flex items-center justify-center gap-2 w-full py-3 bg-white border border-black/10 text-black text-sm font-medium rounded-xl hover:border-[var(--brand-cyan)] active:scale-[0.98] transition-all">
-                <PhoneCall className="w-4 h-4 brand-icon" />
-                Call 01753971125
-              </a>
-            </div>
-          </div>
-        </div>
-      </div>
+                {currentImg ? (
+                  <HeicImage
+                    src={currentImg.url}
+                    alt={product.name}
+                    className="h-full w-full object-contain p-5 sm:p-8"
+                    loading="eager"
+                  />
+                ) : (
+                  <div className="flex h-full w-full items-center justify-center">
+                    <ImageOff className="h-12 w-12 text-black/20" />
+                  </div>
+                )}
 
-      {/* ── Lightbox ── */}
-      {lightbox && currentImg && (
-        <div className="fixed inset-0 bg-white/95 z-50 flex items-center justify-center p-4"
-          onClick={() => setLightbox(false)}>
-          <button onClick={() => setLightbox(false)}
-            className="absolute top-4 right-4 text-black/50 hover:text-[var(--brand-cyan)] text-sm transition-colors">
+                {images.length > 1 ? (
+                  <>
+                    <button
+                      type="button"
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        showPreviousImage();
+                      }}
+                      className="absolute left-4 top-1/2 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full border border-black/10 bg-white/95 shadow-sm transition hover:border-[var(--brand-cyan)]"
+                      aria-label="Previous image"
+                    >
+                      <ChevronLeft className="h-5 w-5" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        showNextImage();
+                      }}
+                      className="absolute right-4 top-1/2 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full border border-black/10 bg-white/95 shadow-sm transition hover:border-[var(--brand-cyan)]"
+                      aria-label="Next image"
+                    >
+                      <ChevronRight className="h-5 w-5" />
+                    </button>
+                  </>
+                ) : null}
+              </div>
+
+              {images.length > 1 ? (
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={showPreviousImage}
+                    className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-black/15 bg-white text-black transition hover:border-[var(--brand-cyan)] hover:text-[var(--brand-cyan)]"
+                    aria-label="Previous thumbnail"
+                  >
+                    <ChevronLeft className="h-5 w-5" />
+                  </button>
+                  <div
+                    ref={thumbnailRailRef}
+                    className="flex min-w-0 flex-1 gap-3 overflow-x-auto scroll-smooth pb-1 [scrollbar-width:thin]"
+                  >
+                    {images.map((image, index) => (
+                      <button
+                        key={image.id}
+                        type="button"
+                        onClick={() => setActiveImg(index)}
+                        className={`h-20 w-20 shrink-0 overflow-hidden rounded-xl border-2 bg-white transition ${
+                          index === activeImg
+                            ? "border-[var(--brand-cyan)] ring-2 ring-[var(--brand-cyan)]/15"
+                            : "border-black/10 hover:border-black/30"
+                        }`}
+                      >
+                        <HeicImage src={image.url} alt={`${product.name} ${index + 1}`} className="h-full w-full object-contain p-1.5" />
+                      </button>
+                    ))}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={showNextImage}
+                    className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-black/15 bg-white text-black transition hover:border-[var(--brand-cyan)] hover:text-[var(--brand-cyan)]"
+                    aria-label="Next thumbnail"
+                  >
+                    <ChevronRight className="h-5 w-5" />
+                  </button>
+                </div>
+              ) : null}
+            </div>
+
+            <aside className="bg-white lg:pt-2">
+              <h1 className="text-3xl font-bold leading-tight brand-title sm:text-4xl">{product.name}</h1>
+
+              <div className="mt-5 space-y-1">
+                <p className="text-sm font-semibold text-black/50">Price</p>
+                <p className="text-3xl font-bold text-black">{formatPrice(product.price)}</p>
+              </div>
+
+              <div className="mt-6 flex flex-col gap-3">
+                <div className="flex items-center justify-between rounded-2xl border border-black/10 bg-white p-2">
+                  <span className="pl-3 text-sm font-bold text-black/60">Quantity</span>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setQuantity((current) => Math.max(1, current - 1))}
+                      className="flex h-10 w-10 items-center justify-center rounded-xl border border-black/10 transition hover:border-[var(--brand-cyan)]"
+                      aria-label="Decrease quantity"
+                    >
+                      <Minus className="h-4 w-4" />
+                    </button>
+                    <input
+                      type="number"
+                      min={1}
+                      value={quantity}
+                      onChange={(event) => {
+                        const parsed = Number.parseInt(event.target.value, 10);
+                        setQuantity(Number.isFinite(parsed) ? Math.max(1, parsed) : 1);
+                      }}
+                      className="h-10 w-14 rounded-xl border border-black/10 text-center text-sm font-bold focus:border-[var(--brand-cyan)] focus:outline-none"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setQuantity((current) => current + 1)}
+                      className="flex h-10 w-10 items-center justify-center rounded-xl border border-black/10 transition hover:border-[var(--brand-cyan)]"
+                      aria-label="Increase quantity"
+                    >
+                      <Plus className="h-4 w-4" />
+                    </button>
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={handleAddToCart}
+                  className="flex w-full items-center justify-center gap-2 rounded-xl brand-button py-3.5 text-sm font-bold transition active:scale-[0.98]"
+                >
+                  <ShoppingCart className="h-4 w-4" />
+                  Add to Cart
+                </button>
+                <a
+                  href={`mailto:sales@buysupply.me?subject=Enquiry: ${encodeURIComponent(product.name)}&body=Hi, I'm interested in the ${encodeURIComponent(product.name)} (ID: ${product.id}). Please can you provide more information.`}
+                  className="flex w-full items-center justify-center gap-2 rounded-xl border border-black/20 bg-white py-3 text-sm font-bold text-black transition hover:border-[var(--brand-cyan)] hover:text-[var(--brand-cyan)] active:scale-[0.98]"
+                >
+                  <Mail className="h-4 w-4" />
+                  Enquire by Email
+                </a>
+                <a
+                  href="tel:01753971125"
+                  className="flex w-full items-center justify-center gap-2 rounded-xl border border-black/20 bg-white py-3 text-sm font-semibold text-black transition hover:border-[var(--brand-cyan)] active:scale-[0.98]"
+                >
+                  <PhoneCall className="h-4 w-4" />
+                  Call 01753 971125
+                </a>
+              </div>
+            </aside>
+          </section>
+
+          <section className="mt-12">
+            <div className="bg-white">
+              <h2 className="text-2xl font-bold brand-title">Product Details</h2>
+              {product.description ? (
+                <p className="mt-4 whitespace-pre-wrap text-sm leading-7 text-black/70 sm:text-base">
+                  <RichText text={product.description} />
+                </p>
+              ) : (
+                <p className="mt-4 text-sm leading-7 text-black/55">
+                  Detailed information is being prepared. Contact our sales team for full availability and condition notes.
+                </p>
+              )}
+            </div>
+          </section>
+        </div>
+      </main>
+
+      <FeaturedProductsSection
+        title="You may also like"
+        kicker="Featured Products"
+        description="Related active products from the same category where available."
+        categorySlug={product.category?.slug}
+        excludeId={product.id}
+      />
+
+      {lightbox && currentImg ? (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-white/95 p-4"
+          onClick={() => setLightbox(false)}
+        >
+          <button
+            type="button"
+            onClick={() => setLightbox(false)}
+            className="absolute right-4 top-4 text-sm font-semibold text-black/50 transition hover:text-[var(--brand-cyan)]"
+          >
             ESC to close
           </button>
-
-          {images.length > 1 && (
-            <>
-              <button onClick={(e) => { e.stopPropagation(); setActiveImg((i) => (i - 1 + images.length) % images.length); }}
-                className="absolute left-4 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-white border border-black/20 flex items-center justify-center hover:border-[var(--brand-cyan)] transition-all">
-                <ChevronLeft className="w-5 h-5 text-black" />
-              </button>
-              <button onClick={(e) => { e.stopPropagation(); setActiveImg((i) => (i + 1) % images.length); }}
-                className="absolute right-4 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-white border border-black/20 flex items-center justify-center hover:border-[var(--brand-cyan)] transition-all">
-                <ChevronRight className="w-5 h-5 text-black" />
-              </button>
-            </>
-          )}
-
-          <div onClick={(e) => e.stopPropagation()}>
-            <HeicImage src={currentImg.url} alt={product.name}
-              className="max-h-[85vh] max-w-[90vw] object-contain rounded-xl" />
+          <div onClick={(event) => event.stopPropagation()}>
+            <HeicImage src={currentImg.url} alt={product.name} className="max-h-[85vh] max-w-[90vw] rounded-xl object-contain" />
           </div>
-
-          {images.length > 1 && (
-            <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-1.5">
-              {images.map((_, i) => (
-                <button key={i} onClick={(e) => { e.stopPropagation(); setActiveImg(i); }}
-                  className={`w-1.5 h-1.5 rounded-full transition-all ${i === activeImg ? "bg-[var(--brand-cyan)] w-4" : "bg-black/30"}`} />
-              ))}
-            </div>
-          )}
         </div>
-      )}
+      ) : null}
     </div>
   );
 }

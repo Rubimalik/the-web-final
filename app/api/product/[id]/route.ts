@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
-import { deleteProduct, getProductById, updateProduct } from "@/lib/catalog-store";
+import { deleteProduct, getProductById, updateProduct, filterPublicProduct } from "@/lib/catalog-store";
 import { deleteProductImages } from "@/lib/supabase-storage";
 import { safeReadRequestJson } from "@/lib/safe-json";
 import { z } from "zod";
 import { getAuthenticatedProfile } from "@/lib/auth/getAuthenticatedProfile";
+import { isApprovedAdmin } from "@/lib/admin-auth";
 
 const productImageSchema = z.object({
   url: z.string().url(),
@@ -21,7 +22,11 @@ const updateProductSchema = z.object({
   description: z.string().optional().nullable(),
   url: z.union([z.string().url(), z.literal(""), z.null()]).optional(),
   price: z.number().min(0).optional().nullable(),
+  dealerPrice: z.number().min(0).optional().nullable(),
+  dealerNotes: z.string().optional().nullable(),
+  visibility: z.enum(["public", "dealer", "both"]).optional(),
   status: z.enum(["draft", "active", "archived"]).optional(),
+  isFeatured: z.boolean().optional(),
   tags: z.string().optional().nullable(),
   categoryId: z.number().int().positive().optional().nullable(),
   images: z.array(productImageSchema).optional(),
@@ -49,21 +54,28 @@ function extractUploadedImageKeys(payload: unknown) {
 }
 
 export async function GET(
-  _req: NextRequest,
+  req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const { id } = await params;
-    const productId = parseInt(id);
+    const productId = Number.parseInt(id, 10);
     if (isNaN(productId))
       return NextResponse.json({ error: "Invalid ID" }, { status: 400 });
 
-    const product = await getProductById(productId);
+    const forcePublicView = new URL(req.url).searchParams.get("public") === "1";
+    const auth = await getAuthenticatedProfile({ sessionKind: "admin" });
+    const isAdmin = !forcePublicView && isApprovedAdmin(auth);
 
-    if (!product)
+    const product = await getProductById(
+      productId,
+      isAdmin ? {} : { allowedVisibilities: ["public", "both"] },
+    );
+
+    if (!product || (!isAdmin && product.status !== "active"))
       return NextResponse.json({ error: "Product not found" }, { status: 404 });
 
-    return NextResponse.json({ data: product });
+    return NextResponse.json({ data: isAdmin ? product : filterPublicProduct(product) });
   } catch (err) {
     console.error("[GET /api/product/:id]", err);
     return NextResponse.json({ error: "Failed to fetch product" }, { status: 500 });
@@ -74,8 +86,8 @@ export async function PUT(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const auth = await getAuthenticatedProfile();
-  if (auth.status !== "authenticated" || auth.role !== "admin" || !auth.onboarding_completed) {
+  const auth = await getAuthenticatedProfile({ sessionKind: "admin" });
+  if (!isApprovedAdmin(auth)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
@@ -83,7 +95,7 @@ export async function PUT(
 
   try {
     const { id } = await params;
-    const productId = parseInt(id);
+    const productId = Number.parseInt(id, 10);
     if (isNaN(productId))
       return NextResponse.json({ error: "Invalid ID" }, { status: 400 });
 
@@ -110,7 +122,11 @@ export async function PUT(
       description,
       url,
       price,
+      dealerPrice,
+      dealerNotes,
+      visibility,
       status,
+      isFeatured,
       tags,
       categoryId,
       images,
@@ -120,12 +136,16 @@ export async function PUT(
 
     const result = await updateProduct(productId, {
       name,
-      description: description || null,
-      url: url || null,
-      price: price ?? null,
+      description: description ?? undefined,
+      url: url ?? undefined,
+      price,
+      dealerPrice,
+      dealerNotes: dealerNotes ?? undefined,
+      visibility,
       status,
-      tags: tags || null,
-      categoryId: categoryId ?? null,
+      isFeatured,
+      tags: tags ?? undefined,
+      categoryId: categoryId ?? undefined,
       images,
       newImages,
       editedImages,
@@ -172,14 +192,14 @@ export async function DELETE(
   _req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const auth = await getAuthenticatedProfile();
-  if (auth.status !== "authenticated" || auth.role !== "admin" || !auth.onboarding_completed) {
+  const auth = await getAuthenticatedProfile({ sessionKind: "admin" });
+  if (!isApprovedAdmin(auth)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
   try {
     const { id } = await params;
-    const productId = parseInt(id);
+    const productId = Number.parseInt(id, 10);
     if (isNaN(productId))
       return NextResponse.json({ error: "Invalid ID" }, { status: 400 });
 

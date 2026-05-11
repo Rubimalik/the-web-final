@@ -1,13 +1,26 @@
 "use client";
 
-import { useEffect, useState, useCallback, Suspense } from "react";
+import { useCallback, useEffect, useState, Suspense } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Search, ShoppingCart, Zap } from "lucide-react";
+import { PackageSearch, Search, ShoppingCart, Zap } from "lucide-react";
 import NavBar from "@/components/Navbar";
+import SiteFooter from "@/components/SiteFooter";
+import FeaturedProductsSection from "@/components/FeaturedProductsSection";
 import { useCart } from "@/components/CartProvider";
 import { getProductImagePlaceholderUrl } from "@/lib/product-image-placeholder";
 import { safeReadJsonResponse } from "@/lib/safe-json";
+import { CATEGORY_IMAGES } from "@/lib/category-images";
+import {
+  CONSUMABLE_MAIN_GROUPS,
+  CONSUMABLE_CATEGORY_SLUGS,
+  PARTS_AND_TONER_TYPES,
+  PRODUCT_MAIN_CATEGORIES,
+  getMainCategoryBySlug,
+  getConsumableGroupBySlug,
+  getConsumableTypeSlugsForGroup,
+  getPartsTypeBySlug,
+} from "@/lib/product-taxonomy";
 
 interface ProductImage { id: number; url: string; isPrimary: boolean; }
 interface Category { id: number; name: string; slug: string; }
@@ -17,11 +30,6 @@ interface Product {
   createdAt: string; images: ProductImage[];
   category: Category | null;
 }
-
-const CATEGORIES = [
-  { label: "Printer", slug: "photocopiers" },
-  { label: "Consumables", slug: "consumables" },
-];
 
 function SkeletonCard() {
   return (
@@ -49,17 +57,17 @@ function ProductCard({
   const imageUrl = primaryImg?.url ?? getProductImagePlaceholderUrl();
 
   return (
-    <article className="group rounded-2xl overflow-hidden bg-white border border-black/10 hover:border-[var(--brand-cyan)]/45 shadow-sm hover:shadow-[0_12px_32px_rgba(0,0,0,0.08)] transition-all duration-300 flex flex-col">
+    <article className="group h-full rounded-2xl overflow-hidden bg-white border border-black/10 hover:border-[var(--brand-cyan)]/45 shadow-sm hover:shadow-[0_12px_32px_rgba(0,0,0,0.08)] transition-all duration-300 flex flex-col">
       <Link href={`/products/${product.id}`} className="block">
         <div className="relative aspect-[4/3] overflow-hidden rounded-t-2xl bg-cyan-50/40">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          src={imageUrl}
-          alt={product.name}
-          className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-300"
-          loading="lazy"
-          decoding="async"
-        />
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={imageUrl}
+            alt={product.name}
+            className="w-full h-full object-contain p-3 group-hover:scale-105 transition-transform duration-300"
+            loading="lazy"
+            decoding="async"
+          />
         </div>
       </Link>
       <div className="p-4 flex flex-col gap-3 flex-1">
@@ -69,7 +77,7 @@ function ProductCard({
           </p>
         </Link>
         <p className="text-base text-black/75 font-semibold">
-          {product.price != null ? `£${Number(product.price).toFixed(2)}` : "POA"}
+          {product.price != null ? `\u00a3${Number(product.price).toFixed(2)}` : "POA"}
         </p>
         <div className="mt-auto flex flex-col gap-2.5 pt-1">
           <button
@@ -94,17 +102,84 @@ function ProductCard({
   );
 }
 
-// ── Inner component that reads searchParams ───────────────────────────────────
+function getPrimaryImage(product?: Product) {
+  return product?.images?.find((image) => image.isPrimary) ?? product?.images?.[0];
+}
+
+function buildProductsHref(category: string, type?: string) {
+  const params = new URLSearchParams({ category });
+  if (type) params.set("type", type);
+  return `/products?${params.toString()}`;
+}
+
+function CategoryCard({
+  title,
+  href,
+  imageUrl,
+}: {
+  title: string;
+  href: string;
+  imageUrl?: string;
+}) {
+  return (
+    <Link href={href} className="group block text-center">
+      <div className="mx-auto overflow-hidden rounded-sm bg-white flex items-center justify-center p-6">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src={imageUrl ?? "/logo.png"}
+          alt={title}
+          className="object-contain transition-transform duration-300 group-hover:scale-[1.03]"
+          loading="lazy"
+          decoding="async"
+          onError={(event) => {
+            event.currentTarget.src = "/logo.png";
+          }}
+        />
+      </div>
+      <p className="mt-4 text-2xl font-extrabold text-black transition-colors group-hover:text-[var(--brand-cyan)] leading-tight">
+        {title}
+      </p>
+    </Link>
+  );
+}
+
+function ConsumablesHero() {
+  return (
+    <section className="bg-slate-800 bg-[radial-gradient(circle_at_80%_30%,rgba(102,217,255,0.18),transparent_28%),linear-gradient(135deg,#324250,#18222c)]">
+      <div className="mx-auto max-w-6xl px-4 py-12 sm:py-16">
+        <h1 className="text-3xl font-extrabold uppercase tracking-tight text-white sm:text-4xl">
+          Consumables
+        </h1>
+        <p className="mt-4 inline-block bg-[var(--brand-cyan)] px-4 py-2 text-sm font-bold leading-snug text-white">
+          The UK&apos;s one stop shop for Canon photocopier consumables
+        </p>
+      </div>
+    </section>
+  );
+}
+
 function ProductsInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
-
-  // Read slug from URL e.g. /products?category=consumables
-  // Also support /products:category=photocopiers style
   const urlCategory = searchParams.get("category");
-  const validSlug = CATEGORIES.find((c) => c.slug === urlCategory)?.slug ?? CATEGORIES[0].slug;
+  const urlType = searchParams.get("type");
+  const showMainShop = !urlCategory;
 
-  const [activeSlug, setActiveSlug] = useState(validSlug);
+  const activeMain = getMainCategoryBySlug(urlCategory) ?? PRODUCT_MAIN_CATEGORIES[0];
+  const activeGroup = getConsumableGroupBySlug(urlType);
+  const activeType = activeGroup ? null : getPartsTypeBySlug(urlType);
+  const activeConsumableLabel = activeGroup?.label ?? activeType?.label;
+  const consumableFilter = activeMain.slug === "consumables"
+    ? activeGroup
+      ? { key: "consumableGroup", value: activeGroup.slug }
+      : activeType
+        ? { key: "consumableType", value: activeType.slug }
+        : { key: "consumableGroup", value: "all" }
+    : null;
+  const consumableFilterKey = consumableFilter?.key;
+  const consumableFilterValue = consumableFilter?.value;
+  const productSlug = activeMain.slug === "photocopiers" ? activeMain.slug : null;
+
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -112,27 +187,44 @@ function ProductsInner() {
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
+  const [categoryPreviewProducts, setCategoryPreviewProducts] = useState<Record<string, Product>>({});
   const { addToCart } = useCart();
 
-  // Sync if URL changes externally
   useEffect(() => {
-    const slug = CATEGORIES.find((c) => c.slug === urlCategory)?.slug ?? CATEGORIES[0].slug;
-    setActiveSlug(slug);
+    if (urlCategory === "parts-and-toner") {
+      router.replace("/consumables", { scroll: false });
+    }
+    if (urlCategory === "consumables") {
+      router.replace("/consumables", { scroll: false });
+    }
+  }, [router, urlCategory]);
+
+  useEffect(() => {
     setPage(1);
     setSearchInput("");
     setSearch("");
-  }, [urlCategory]);
+  }, [activeMain.slug, activeGroup?.slug, activeType?.slug]);
 
   const fetchProducts = useCallback(async () => {
+    if (showMainShop || activeMain.slug === "consumables") {
+      setProducts([]);
+      setTotalPages(1);
+      setLoading(false);
+      return;
+    }
+
     setLoading(true);
     setError("");
     try {
       const params = new URLSearchParams({
-        slug: activeSlug,
         status: "active",
         page: String(page),
         limit: "12",
       });
+      if (productSlug) params.set("slug", productSlug);
+      if (consumableFilterKey && consumableFilterValue) {
+        params.set(consumableFilterKey, consumableFilterValue);
+      }
       if (search) params.set("search", search);
 
       const res = await fetch(`/api/product?${params}`);
@@ -150,24 +242,53 @@ function ProductsInner() {
     } finally {
       setLoading(false);
     }
-  }, [activeSlug, search, page]);
+  }, [activeMain.slug, consumableFilterKey, consumableFilterValue, page, productSlug, search, showMainShop]);
 
-  useEffect(() => { fetchProducts(); }, [fetchProducts]);
+  useEffect(() => { void fetchProducts(); }, [fetchProducts]);
 
-  // Debounce search
+  useEffect(() => {
+    if (activeMain.slug !== "consumables") return;
+
+    let cancelled = false;
+    async function loadCategoryPreviews() {
+      const previewTypes = ["toner", "parts"];
+      const entries = await Promise.all(
+        previewTypes.map(async (typeSlug) => {
+          try {
+            const params = new URLSearchParams({
+              status: "active",
+              page: "1",
+              limit: "1",
+              consumableGroup: typeSlug,
+            });
+            const response = await fetch(`/api/product?${params.toString()}`);
+            const payload = await safeReadJsonResponse<{ data?: Product[] }>(
+              response,
+              "ProductsPage category previews",
+            );
+            return [typeSlug, payload?.data?.[0]] as const;
+          } catch {
+            return [typeSlug, undefined] as const;
+          }
+        }),
+      );
+      if (cancelled) return;
+      setCategoryPreviewProducts(
+        Object.fromEntries(entries.filter((entry): entry is readonly [string, Product] => Boolean(entry[1]))),
+      );
+    }
+
+    void loadCategoryPreviews();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [activeMain.slug]);
+
   useEffect(() => {
     const t = setTimeout(() => { setSearch(searchInput); setPage(1); }, 400);
     return () => clearTimeout(t);
   }, [searchInput]);
-
-  const switchCategory = (slug: string) => {
-    // Update URL so it's shareable/bookmarkable
-    router.push(`/products?category=${slug}`, { scroll: false });
-    setActiveSlug(slug);
-    setPage(1);
-    setSearchInput("");
-    setSearch("");
-  };
 
   const handleAddToCart = (product: Product) => {
     addToCart({
@@ -183,56 +304,138 @@ function ProductsInner() {
     router.push("/checkout");
   };
 
+  const rootCategoryCards = CONSUMABLE_MAIN_GROUPS.map((group) => ({
+    ...group,
+    imageUrl: getPrimaryImage(categoryPreviewProducts[group.slug])?.url,
+  }));
+  const selectedTypeCards = activeGroup
+    ? PARTS_AND_TONER_TYPES.filter((type) =>
+      getConsumableTypeSlugsForGroup(activeGroup.slug).includes(type.slug),
+    ).map((type) => {
+      const product = products.find((item) => item.category?.slug === type.slug);
+      return {
+        title: type.label,
+        href: buildProductsHref("consumables", type.slug),
+        imageUrl: getPrimaryImage(product)?.url,
+      };
+    })
+    : [];
+  const isConsumablesPage = activeMain.slug === "consumables" && !showMainShop;
+
   return (
     <div className="min-h-screen bg-white text-black font-myriad">
       <NavBar />
 
-      {/* ── Category tabs ── */}
-      <div className="border-b border-black/10 bg-white">
-        <div className="max-w-6xl mx-auto px-4 py-6 flex items-center justify-center gap-3">
-          {CATEGORIES.map((cat) => (
-            <button key={cat.slug} onClick={() => switchCategory(cat.slug)}
-              className={`px-6 py-2.5 rounded-full text-sm font-semibold transition-all duration-200 ${activeSlug === cat.slug
-                  ? "brand-button"
-                  : "bg-white text-black border border-black/20 hover:border-[var(--brand-cyan)] hover:text-[var(--brand-cyan)]"
-                }`}>
-              {cat.label}
-            </button>
-          ))}
-        </div>
-      </div>
+      {isConsumablesPage ? <ConsumablesHero /> : null}
 
-      {/* ── Search + content ── */}
-      <div className="max-w-6xl mx-auto px-4 py-8 sm:py-10">
-        <div className="mb-8 flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
-          <div>
-            <h1 className="text-3xl sm:text-4xl font-bold brand-title">Products</h1>
-            <p className="text-black/60 mt-1 text-sm sm:text-base">Browse available stock and shop quickly.</p>
+      <main className="max-w-6xl mx-auto px-4 py-8 sm:py-10">
+        {showMainShop ? (
+          <div className="mb-10 text-center">
+            <h1 className="text-3xl font-extrabold uppercase tracking-tight text-black sm:text-4xl">
+              Shop
+            </h1>
           </div>
-          <div className="relative w-full sm:w-[360px]">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-black/40 pointer-events-none" />
-            <input value={searchInput} onChange={(e) => setSearchInput(e.target.value)}
-              placeholder="Search products..."
-              className="w-full pl-9 pr-4 py-3 text-sm bg-white border border-black/15 text-black placeholder:text-black/45 rounded-lg focus:outline-none focus:border-[var(--brand-cyan)] transition-all" />
+        ) : null}
+
+        <div className="mb-8">
+          <div className="relative w-full">
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-black/50 pointer-events-none" />
+            <input
+              value={searchInput}
+              onChange={(e) => setSearchInput(e.target.value)}
+              placeholder="Search..."
+              className="w-full border border-black/70 bg-white py-3 pl-9 pr-4 text-sm font-semibold uppercase text-black placeholder:text-black/70 focus:border-[var(--brand-cyan)] focus:outline-none"
+            />
           </div>
         </div>
 
-        <div className="h-px bg-black/10 mb-8" />
-
-        {error && <p className="text-center text-red-500 text-sm py-8">{error}</p>}
-
-        {loading && (
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-            {Array.from({ length: 10 }).map((_, i) => <SkeletonCard key={i} />)}
+        {showMainShop ? (
+          <div className="mb-12">
+            <div className="mx-auto grid max-w-3xl grid-cols-1 gap-x-1.25 gap-y-10 sm:grid-cols-2">
+              <CategoryCard
+                title="Printers"
+                href={buildProductsHref("photocopiers")}
+                imageUrl={CATEGORY_IMAGES.printers}
+              />
+              <CategoryCard
+                title="Parts and Toners"
+                href="/consumables"
+                imageUrl={CATEGORY_IMAGES.consumables}
+              />
+            </div>
           </div>
-        )}
+        ) : null}
 
-        {!loading && !error && products.length === 0 && (
-          <p className="text-center text-black/50 text-sm py-16">No products found.</p>
-        )}
+        {!showMainShop ? (
+          <nav className="mb-8 flex flex-wrap items-center gap-2 text-sm text-black/55">
+            <Link href="/products" className="hover:text-[var(--brand-cyan)]">Products</Link>
+            <span>/</span>
+            <Link href={buildProductsHref(activeMain.slug)} className="hover:text-[var(--brand-cyan)]">
+              {activeMain.label}
+            </Link>
+            {activeConsumableLabel ? (
+              <>
+                <span>/</span>
+                <span className="text-black/80">{activeConsumableLabel}</span>
+              </>
+            ) : null}
+          </nav>
+        ) : null}
 
-        {!loading && !error && products.length > 0 && (
+        {isConsumablesPage ? (
+          <div className="mb-12">
+            <div className="mx-auto grid max-w-3xl grid-cols-1 gap-x-8 gap-y-10 sm:grid-cols-2">
+              {rootCategoryCards.map((type) => (
+                <CategoryCard
+                  key={type.slug}
+                  title={type.label}
+                  href={buildProductsHref("consumables", type.slug)}
+                  imageUrl={type.imageUrl}
+                />
+              ))}
+            </div>
+          </div>
+        ) : null}
+
+        {isConsumablesPage && activeGroup ? (
+          <div className="mb-12">
+            <div className="mx-auto grid max-w-5xl grid-cols-1 gap-x-8 gap-y-10 sm:grid-cols-3">
+              {selectedTypeCards.map((card) => (
+                <CategoryCard key={card.title} {...card} />
+              ))}
+            </div>
+          </div>
+        ) : null}
+
+        {!showMainShop && error ? <p className="text-center text-red-500 text-sm py-8">{error}</p> : null}
+
+        {!showMainShop && loading ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+            {Array.from({ length: 4 }).map((_, i) => <SkeletonCard key={i} />)}
+          </div>
+        ) : null}
+
+        {!showMainShop && !loading && !error && products.length === 0 ? (
+          <div className="mx-auto max-w-md rounded-2xl brand-surface p-8 text-center animate-[fadeIn_360ms_ease]">
+            <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-cyan-50 text-[var(--brand-cyan)]">
+              <PackageSearch className="h-5 w-5" />
+            </div>
+            <p className="font-semibold text-black">No products found</p>
+            <p className="mt-2 text-sm leading-relaxed text-black/55">
+              {activeGroup || activeType
+                ? "No products found for the selected filters."
+                : "This category is ready, but no products have been added yet."}
+            </p>
+          </div>
+        ) : null}
+
+        {!showMainShop && !loading && !error && products.length > 0 ? (
           <>
+            {activeConsumableLabel ? (
+              <h2 className="mb-7 text-center text-xl font-bold uppercase tracking-wide text-black">
+                {activeConsumableLabel}
+              </h2>
+            ) : null}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
               {products.map((p) => (
                 <ProductCard
@@ -243,7 +446,7 @@ function ProductsInner() {
                 />
               ))}
             </div>
-            {totalPages > 1 && (
+            {totalPages > 1 ? (
               <div className="flex items-center justify-center gap-2 mt-10">
                 <button onClick={() => setPage((p) => p - 1)} disabled={page === 1}
                   className="px-4 py-1.5 text-sm text-black/60 border border-black/20 rounded-lg hover:border-[var(--brand-cyan)] hover:text-[var(--brand-cyan)] disabled:opacity-30 disabled:cursor-not-allowed transition-all">
@@ -255,15 +458,43 @@ function ProductsInner() {
                   Next
                 </button>
               </div>
-            )}
+            ) : null}
           </>
-        )}
-      </div>
+        ) : null}
+      </main>
+
+      {showMainShop ? (
+        <FeaturedProductsSection
+          title="FEATURED PRODUCTS"
+          kicker=""
+          description=""
+          limit={8}
+          className="border-t-0 pt-8"
+          centered
+          showBrowseLink={true}
+          allowGlobalFallback={true}
+        />
+      ) : null}
+
+      {isConsumablesPage ? (
+        <FeaturedProductsSection
+          title="FEATURED PRODUCTS"
+          kicker=""
+          description=""
+          categorySlugs={CONSUMABLE_CATEGORY_SLUGS}
+          limit={8}
+          className="border-t-0 pt-8"
+          centered
+          showBrowseLink={false}
+          allowGlobalFallback={false}
+        />
+      ) : null}
+
+      <SiteFooter />
     </div>
   );
 }
 
-// Wrap in Suspense because useSearchParams requires it
 export default function ProductsPage() {
   return (
     <Suspense>

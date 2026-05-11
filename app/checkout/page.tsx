@@ -2,9 +2,11 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useState } from "react";
 import NavBar from "@/components/Navbar";
 import SiteFooter from "@/components/SiteFooter";
 import { useCart } from "@/components/CartProvider";
+import { useAuth } from "@/lib/auth/useAuth";
 
 function formatPrice(value: number) {
   return `£${value.toFixed(2)}`;
@@ -12,9 +14,54 @@ function formatPrice(value: number) {
 
 export default function CheckoutPage() {
   const router = useRouter();
-  const { items, totalPrice, clearCart } = useCart();
+  const { items, totalPrice } = useCart();
+  const { user, access, loading: authLoading } = useAuth();
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState("");
 
-  const canPlaceOrder = items.length > 0;
+  const isCustomer = !!user && !!access?.canAccessCustomer;
+  const canPlaceOrder = items.length > 0 && isCustomer;
+  const handleConfirmOrder = async () => {
+    if (!authLoading && !isCustomer) {
+      router.push("/signin?from=%2Fcheckout");
+      return;
+    }
+    if (!canPlaceOrder || submitting) return;
+
+    setSubmitting(true);
+    setError("");
+    try {
+      const response = await fetch("/api/checkout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          items: items.map((item) => ({
+            productId: item.product.id,
+            quantity: item.quantity,
+          })),
+        }),
+      });
+
+      const payload = (await response.json()) as { error?: string; url?: string };
+      if (!response.ok) {
+        if (response.status === 401) {
+          router.push("/signin?from=%2Fcheckout");
+          return;
+        }
+        throw new Error(payload.error || "Failed to create order.");
+      }
+
+      if (!payload.url) {
+        throw new Error("Stripe checkout did not return a redirect URL.");
+      }
+
+      window.location.assign(payload.url);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to create order.");
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-white text-black font-myriad">
@@ -60,15 +107,19 @@ export default function CheckoutPage() {
             <p className="mt-2 text-xs text-black/50">POA products are priced after confirmation.</p>
             <button
               type="button"
-              disabled={!canPlaceOrder}
-              onClick={() => {
-                clearCart();
-                router.push("/order-confirmation");
-              }}
+              disabled={items.length === 0 || authLoading || submitting}
+              onClick={() => void handleConfirmOrder()}
               className="mt-5 w-full rounded-lg brand-button py-2.5 text-sm disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              Confirm Order
+              {authLoading
+                ? "Checking account..."
+                : !isCustomer
+                  ? "Sign in to Checkout"
+                  : submitting
+                    ? "Confirming..."
+                    : "Confirm Order"}
             </button>
+            {error ? <p className="mt-3 text-sm text-red-600">{error}</p> : null}
           </aside>
         </div>
       </main>

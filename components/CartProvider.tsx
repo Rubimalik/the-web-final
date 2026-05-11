@@ -37,32 +37,39 @@ function toPrice(value: number | null): number {
 }
 
 export default function CartProvider({ children }: { children: React.ReactNode }) {
-  const [items, setItems] = useState<CartItem[]>(() => {
-    if (typeof window === "undefined") return [];
-    try {
-      const raw = window.localStorage.getItem(CART_STORAGE_KEY);
-      if (!raw) return [];
-      const parsed = JSON.parse(raw) as CartItem[];
-      if (Array.isArray(parsed)) {
-        return parsed.filter(
-          (item) =>
-            item &&
-            typeof item.product?.id === "number" &&
-            typeof item.quantity === "number" &&
-            item.quantity > 0
-        );
-      }
-      return [];
-    } catch {
-      return [];
-    }
-  });
+  const [items, setItems] = useState<CartItem[]>([]);
+  const [hasHydrated, setHasHydrated] = useState(false);
   const [cartPulseKey, setCartPulseKey] = useState(0);
   const [lastAddedProductName, setLastAddedProductName] = useState<string | null>(null);
 
   useEffect(() => {
+    try {
+      const raw = window.localStorage.getItem(CART_STORAGE_KEY);
+      if (!raw) return;
+
+      const parsed = JSON.parse(raw) as CartItem[];
+      if (!Array.isArray(parsed)) return;
+
+      setItems(
+        parsed.filter(
+          (item) =>
+            item &&
+            typeof item.product?.id === "number" &&
+            typeof item.quantity === "number" &&
+            item.quantity > 0,
+        ),
+      );
+    } catch {
+      setItems([]);
+    } finally {
+      setHasHydrated(true);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!hasHydrated) return;
     window.localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(items));
-  }, [items]);
+  }, [hasHydrated, items]);
 
   const value = useMemo<CartContextValue>(() => {
     const itemCount = items.reduce((acc, item) => acc + item.quantity, 0);
