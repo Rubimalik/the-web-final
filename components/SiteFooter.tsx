@@ -10,6 +10,17 @@ const links = [
   { label: "Get a Quote", href: "/sell-to-us#sell-form" },
 ];
 
+const areaLinks = [
+  { label: "Slough", href: "/slough-berkshire" },
+  { label: "Windsor", href: "/windsor-berkshire" },
+  { label: "Maidenhead", href: "/maidenhead-berkshire" },
+  { label: "Ascot", href: "/ascot-berkshire" },
+  { label: "Reading", href: "/reading-berkshire" },
+  { label: "Slough Trading Estate", href: "/slough-trading-estate" },
+];
+
+const footerLinks = [...links];
+
 export default function SiteFooter() {
   return (
     <footer className="bg-black text-white py-12 font-myriad border-t border-black">
@@ -30,7 +41,7 @@ export default function SiteFooter() {
         <div>
           <h3 className="font-semibold mb-3 text-white">Quick Links</h3>
           <ul className="space-y-2 text-white/85 text-sm">
-            {links.map((link) => (
+            {footerLinks.map((link) => (
               <li key={link.href}>
                 <Link href={link.href} className="brand-accent-link">
                   {link.label}
@@ -56,7 +67,20 @@ export default function SiteFooter() {
           </a>
         </div>
       </div>
-      <div className="mt-8 text-center text-xs text-white/60">
+      <div className="mt-8 max-w-6xl mx-auto px-6 text-center text-sm text-white/70 leading-relaxed">
+        <p className="font-semibold text-white mb-2">Areas We Cover:</p>
+        <div className="flex flex-wrap justify-center gap-3 text-sm">
+          {areaLinks.map((link, index) => (
+            <span key={link.href} className="text-white/75">
+              <a href={link.href} className="brand-accent-link inline-block">
+                {link.label}
+              </a>
+              {index < areaLinks.length - 1 && <span className="mx-2 text-white/50">|</span>}
+            </span>
+          ))}
+        </div>
+      </div>
+      <div className="mt-6 text-center text-xs text-white/60">
         &copy; 2026 buysupply. All rights reserved.
       </div>
     </footer>

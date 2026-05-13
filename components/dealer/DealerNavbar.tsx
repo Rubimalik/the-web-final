@@ -11,7 +11,7 @@ import { cn } from "@/lib/utils";
 const navLinks = [
   { label: "Home", href: "/dealer" },
   { label: "Products", href: "/dealer/products" },
-  { label: "Contact Us", href: "mailto:sales@buysupply.me" },
+  { label: "Contact", href: "/dealer/contact" },
 ];
 
 const aboutLinks = [

@@ -1,0 +1,102 @@
+import type { Metadata } from "next";
+import ContactForm from "@/components/ContactForm";
+import { Clock3, Mail, MapPin, Phone } from "lucide-react";
+
+export const metadata: Metadata = {
+  title: "Contact Us",
+  description:
+    "Contact BuySupply dealer support for photocopier and printer sales, rental, leasing, collection, and export enquiries.",
+  alternates: {
+    canonical: "/dealer/contact",
+  },
+};
+
+export default function DealerContactPage() {
+  return (
+    <main className="max-w-6xl mx-auto px-4 sm:px-6 py-12 sm:py-16">
+      <section className="text-center max-w-3xl mx-auto mb-10 sm:mb-14">
+        <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold brand-title">
+          Contact Us
+        </h1>
+        <p className="mt-4 text-black/70 text-sm sm:text-base leading-relaxed">
+          Speak with our team about buying, selling, renting, or exporting photocopiers and printer equipment.
+          We respond promptly with clear, practical guidance.
+        </p>
+      </section>
+
+      <section className="grid grid-cols-1 lg:grid-cols-5 gap-8 lg:gap-10">
+        <div className="lg:col-span-3 brand-surface rounded-2xl p-5 sm:p-7">
+          <h2 className="text-2xl font-bold brand-title mb-6">Send Us a Message</h2>
+          <ContactForm source="dealer" />
+        </div>
+
+        <div className="lg:col-span-2 brand-surface rounded-2xl p-5 sm:p-7">
+          <h2 className="text-2xl font-bold brand-title mb-6">Business Details</h2>
+          <div className="space-y-5 text-sm sm:text-base">
+            <div className="flex items-start gap-3">
+              <MapPin className="h-5 w-5 mt-0.5 shrink-0 brand-icon" />
+              <div>
+                <p className="text-black/45 uppercase tracking-widest text-xs mb-1">
+                  Address
+                </p>
+                <p className="text-black/80">
+                  Slough Trading Estate, Slough, United Kingdom
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-start gap-3">
+              <Phone className="h-5 w-5 mt-0.5 shrink-0 brand-icon" />
+              <div>
+                <p className="text-black/45 uppercase tracking-widest text-xs mb-1">
+                  Phone
+                </p>
+                <a
+                  href="tel:01753971125"
+                  className="text-black/80 hover:text-[var(--brand-pink-hover)] transition-colors"
+                >
+                  01753 971125
+                </a>
+              </div>
+            </div>
+
+            <div className="flex items-start gap-3">
+              <Mail className="h-5 w-5 mt-0.5 shrink-0 brand-icon" />
+              <div>
+                <p className="text-black/45 uppercase tracking-widest text-xs mb-1">
+                  Email
+                </p>
+                <a
+                  href="mailto:sales@buysupply.me"
+                  className="text-black/80 hover:text-[var(--brand-pink-hover)] transition-colors"
+                >
+                  sales@buysupply.me
+                </a>
+              </div>
+            </div>
+
+            <div className="flex items-start gap-3">
+              <Clock3 className="h-5 w-5 mt-0.5 shrink-0 brand-icon" />
+              <div>
+                <p className="text-black/45 uppercase tracking-widest text-xs mb-1">
+                  Working Hours
+                </p>
+                <p className="text-black/80">Mon - Fri: 9:00 AM - 5:30 PM</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section className="mt-8 sm:mt-10 brand-surface rounded-2xl p-2 sm:p-3">
+        <iframe
+          title="BuySupply Location Map"
+          src="https://www.google.com/maps?q=Slough+Trading+Estate,+Slough,+UK&output=embed"
+          className="w-full h-[300px] sm:h-[360px] rounded-xl border-0"
+          loading="lazy"
+          referrerPolicy="no-referrer-when-downgrade"
+        />
+      </section>
+    </main>
+  );
+}

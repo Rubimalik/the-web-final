@@ -30,7 +30,7 @@ export default function Home() {
         </p>
 
         <p className="mt-5 text-[14px] sm:text-[16px] md:text-[18px] text-black/70 max-w-[90%] sm:max-w-[640px] mx-auto leading-relaxed font-myriad">
-          We buy & sell photocopiers, printers, peripherals, toners, ink, and consumables.
+          We buy & sell photocopiers, printers, peripherals, toners, ink, and parts.
         </p>
 
         <section className="mt-10 sm:mt-14 flex flex-col items-center">
@@ -89,9 +89,7 @@ export default function Home() {
         <div className="max-w-5xl mx-auto text-center">
           <h2 className="text-3xl md:text-4xl font-bold mb-5 brand-title">About Us</h2>
           <p className="text-black/75 text-sm sm:text-base md:text-lg leading-relaxed max-w-3xl mx-auto">
-            BuySupply is a trusted UK office equipment partner focused on buying, supplying, and supporting
-            photocopiers, printers, and consumables. Our team combines market knowledge with practical service to help
-            businesses move stock quickly and confidently.
+            BuySupply is a trusted UK office equipment partner focused on buying, supplying, and supporting photocopiers and printers.
           </p>
         </div>
       </section>

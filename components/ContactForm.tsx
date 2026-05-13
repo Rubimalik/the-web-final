@@ -6,7 +6,11 @@ import { safeReadJsonResponse } from "@/lib/safe-json";
 const inputClass =
   "w-full rounded-lg border border-black/15 bg-white px-4 py-3 text-sm text-black placeholder:text-black/45 focus:border-[var(--brand-cyan)] focus:outline-none";
 
-export default function ContactForm() {
+interface ContactFormProps {
+  source?: string;
+}
+
+export default function ContactForm({ source }: ContactFormProps) {
   const [state, setState] = useState<"idle" | "loading" | "success" | "error">("idle");
   const [message, setMessage] = useState("");
 
@@ -45,6 +49,7 @@ export default function ContactForm() {
 
   return (
     <form onSubmit={handleSubmit} className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-5">
+      {source ? <input type="hidden" name="source" value={source} /> : null}
       <div>
         <label className="text-xs uppercase tracking-widest text-black/60 mb-1.5 block">
           Name
