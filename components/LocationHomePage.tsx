@@ -7,6 +7,7 @@ import SiteFooter from "@/components/SiteFooter";
 interface LocationHomePageProps {
   heroTitle: string;
   tagline: string;
+  locationSpecificParagraph: string;
   printersLink: string;
   consumablesLink: string;
   featuredSection: ReactNode;
@@ -20,6 +21,7 @@ interface LocationHomePageProps {
 export default function LocationHomePage({
   heroTitle,
   tagline,
+  locationSpecificParagraph,
   printersLink,
   consumablesLink,
   featuredSection,
@@ -29,6 +31,18 @@ export default function LocationHomePage({
   showNavigation = false,
   showFooter = false,
 }: LocationHomePageProps) {
+  const reasons = [
+    "UK’s No.1 independent refurbished Canon reseller",
+    "Established since 2001",
+    "Canon photocopier specialists",
+    "Slough Trading Estate coverage",
+    "Nationwide UK delivery",
+    "Fully refurbished & tested systems",
+    "Flexible copier rental options",
+    "Genuine Canon toners & consumables",
+    "UK & export specialists",
+  ];
+
   return (
     <div className="bg-white text-black min-h-screen font-myriad">
       {showNavigation && <NavBar />}
@@ -112,13 +126,46 @@ export default function LocationHomePage({
         </section>
       </section>
 
-      <section className="border-t border-black/10 px-4 py-14 sm:py-16">
-        <div className="max-w-5xl mx-auto text-center">
-          <h2 className="text-3xl md:text-4xl font-bold mb-5 brand-title">
+      <section className="border-t border-black/10 px-4 py-16 sm:py-18 md:py-20">
+        <div className="location-content-reveal max-w-5xl mx-auto">
+          <h2 className="text-center text-3xl md:text-4xl font-bold mb-8 brand-title">
             About Us
           </h2>
-          <p className="text-black/75 text-sm sm:text-base md:text-lg leading-relaxed max-w-3xl mx-auto">
-            BuySupply is a trusted UK office equipment partner focused on buying, supplying, and supporting photocopiers and printers.
+          <div className="location-content-step mx-auto max-w-4xl space-y-6 text-black/75 text-[15px] sm:text-base md:text-[17px] leading-7 sm:leading-8">
+            <p>
+              BuySupply are the UK’s No.1 independent reseller of reconditioned and refurbished Canon photocopiers, supplying businesses nationwide with professionally refurbished Canon multifunction printers, office photocopiers and print solutions since 2001.
+            </p>
+            <p>{locationSpecificParagraph}</p>
+            <p>
+              We proudly supply businesses throughout Slough, Slough Trading Estate, Burnham, Maidenhead, Windsor, Ascot, Reading, Heathrow, West London and the entire UK with nationwide delivery, installation and ongoing support available.
+            </p>
+            <p>
+              Whether you are looking to buy a refurbished Canon photocopier in Maidenhead, rent a Canon printer in Ascot, source office photocopiers near Slough Trading Estate or upgrade your office print equipment anywhere in the UK, BuySupply provide reliable equipment, competitive pricing and expert support backed by decades of industry experience.
+            </p>
+          </div>
+
+          <div className="location-content-step location-content-step-delay-1 mt-10 sm:mt-12 brand-surface rounded-lg p-5 sm:p-7">
+            <h3 className="text-center sm:text-left text-lg sm:text-xl font-bold text-black">
+              Why businesses choose BuySupply.me:
+            </h3>
+            <ul className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              {reasons.map((reason) => (
+                <li
+                  key={reason}
+                  className="location-check-item flex items-start gap-3 rounded-md border border-black/10 bg-white/80 px-4 py-3 text-sm sm:text-base text-black/75"
+                >
+                  <span
+                    aria-hidden="true"
+                    className="mt-2 h-2 w-2 shrink-0 rounded-full bg-[var(--brand-cyan)]"
+                  />
+                  <span>{reason}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          <p className="location-content-step location-content-step-delay-2 mt-10 sm:mt-12 text-center text-xl sm:text-2xl font-bold tracking-wide brand-title">
+            Buy • Sell • Supply • Export
           </p>
         </div>
       </section>

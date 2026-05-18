@@ -370,3 +370,53 @@ html {
     transform: translateY(0);
   }
 }
+
+@keyframes locationContentReveal {
+  from {
+    opacity: 0;
+    transform: translateY(18px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.location-content-reveal {
+  animation: locationContentReveal 0.78s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.location-content-step {
+  animation: locationContentReveal 0.72s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.location-content-step-delay-1 {
+  animation-delay: 0.12s;
+}
+
+.location-content-step-delay-2 {
+  animation-delay: 0.24s;
+}
+
+.location-check-item {
+  transition: border-color 0.5s ease, box-shadow 0.5s ease, transform 0.5s ease;
+}
+
+.location-check-item:hover {
+  border-color: rgba(0, 207, 255, 0.42);
+  box-shadow: 0 10px 24px rgba(0, 207, 255, 0.09);
+  transform: translateY(-2px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .location-content-reveal,
+  .location-content-step {
+    animation: none;
+  }
+
+  .location-check-item,
+  .location-check-item:hover {
+    transition: none;
+    transform: none;
+  }
+}

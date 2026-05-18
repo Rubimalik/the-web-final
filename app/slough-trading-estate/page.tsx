@@ -23,6 +23,7 @@ export default function SloughTradingEstatePage() {
     <LocationHomePage
       heroTitle="BUYSUPPLY"
       tagline="Buy copier printer parts & toner Slough Trading Estate"
+      locationSpecificParagraph="Based near the Slough Trading Estate in Burnham, Slough, we specialise in refurbished Canon imageRUNNER ADVANCE photocopiers, Canon office printers, multifunction devices, copier rentals, servicing, maintenance and genuine Canon consumables. Every machine is professionally tested, inspected and prepared by experienced technicians within our dedicated workshop facility before dispatch."
       printersLink="/products?category=photocopiers"
       consumablesLink="/products?category=consumables"
       featuredSection={<FeaturedProductsSection />}
