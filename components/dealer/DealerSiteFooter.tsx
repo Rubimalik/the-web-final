@@ -20,8 +20,34 @@ const areaLinks = [
 const footerLinks = [...links];
 
 const socialLinks = [
-  { label: "Facebook", href: "https://www.facebook.com/100091758102794/" },
-  { label: "Instagram", href: "https://www.instagram.com/buysupply1/" },
+  {
+    label: "Visit BuySupply on Facebook",
+    href: "https://www.facebook.com/100091758102794/",
+    icon: (
+      <svg aria-hidden="true" viewBox="0 0 24 24" className="h-5 w-5" fill="currentColor">
+        <path d="M13.5 21v-7.8h2.6l.4-3h-3V8.3c0-.9.2-1.5 1.5-1.5h1.6V4.1c-.8-.1-1.5-.1-2.3-.1-2.3 0-3.9 1.4-3.9 4v2.2H7.8v3h2.6V21h3.1Z" />
+      </svg>
+    ),
+  },
+  {
+    label: "Visit BuySupply on Instagram",
+    href: "https://www.instagram.com/buysupply1/",
+    icon: (
+      <svg aria-hidden="true" viewBox="0 0 24 24" className="h-5 w-5" fill="none">
+        <rect
+          width="15.5"
+          height="15.5"
+          x="4.25"
+          y="4.25"
+          rx="4.2"
+          stroke="currentColor"
+          strokeWidth="1.8"
+        />
+        <circle cx="12" cy="12" r="3.6" stroke="currentColor" strokeWidth="1.8" />
+        <circle cx="16.55" cy="7.45" r="1.05" fill="currentColor" />
+      </svg>
+    ),
+  },
 ];
 
 export default function DealerSiteFooter() {
@@ -75,9 +101,10 @@ export default function DealerSiteFooter() {
                 href={link.href}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="brand-accent-link"
+                aria-label={link.label}
+                className="inline-flex h-6 w-6 items-center justify-center text-white/80 hover:text-[var(--brand-pink-hover)] transition-colors duration-250 ease-in-out"
               >
-                {link.label}
+                {link.icon}
               </a>
             ))}
           </div>
