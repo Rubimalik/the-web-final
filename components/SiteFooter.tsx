@@ -21,6 +21,11 @@ const areaLinks = [
 
 const footerLinks = [...links];
 
+const socialLinks = [
+  { label: "Facebook", href: "https://www.facebook.com/100091758102794/" },
+  { label: "Instagram", href: "https://www.instagram.com/buysupply1/" },
+];
+
 export default function SiteFooter() {
   return (
     <footer className="bg-black text-white py-12 font-myriad border-t border-black">
@@ -65,6 +70,19 @@ export default function SiteFooter() {
           >
             01753971125
           </a>
+          <div className="mt-3 flex flex-wrap gap-3 text-sm">
+            {socialLinks.map((link) => (
+              <a
+                key={link.href}
+                href={link.href}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="brand-accent-link"
+              >
+                {link.label}
+              </a>
+            ))}
+          </div>
         </div>
       </div>
       <div className="mt-8 max-w-6xl mx-auto px-6 text-center text-sm text-white/70 leading-relaxed">
