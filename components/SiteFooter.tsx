@@ -26,7 +26,7 @@ const socialLinks = [
     label: "Visit BuySupply on Facebook",
     href: "https://www.facebook.com/100091758102794/",
     icon: (
-      <svg aria-hidden="true" viewBox="0 0 24 24" className="h-5 w-5" fill="currentColor">
+      <svg aria-hidden="true" viewBox="0 0 24 24" className="h-6 w-6" fill="currentColor">
         <path d="M13.5 21v-7.8h2.6l.4-3h-3V8.3c0-.9.2-1.5 1.5-1.5h1.6V4.1c-.8-.1-1.5-.1-2.3-.1-2.3 0-3.9 1.4-3.9 4v2.2H7.8v3h2.6V21h3.1Z" />
       </svg>
     ),
@@ -35,7 +35,7 @@ const socialLinks = [
     label: "Visit BuySupply on Instagram",
     href: "https://www.instagram.com/buysupply1/",
     icon: (
-      <svg aria-hidden="true" viewBox="0 0 24 24" className="h-5 w-5" fill="none">
+      <svg aria-hidden="true" viewBox="0 0 24 24" className="h-6 w-6" fill="none">
         <rect
           width="15.5"
           height="15.5"
@@ -96,7 +96,8 @@ export default function SiteFooter() {
           >
             01753971125
           </a>
-          <div className="mt-3 flex flex-wrap gap-3 text-sm">
+          <h3 className="mt-4 font-semibold mb-3 text-white">Social Links</h3>
+          <div className="flex flex-wrap gap-3 text-sm">
             {socialLinks.map((link) => (
               <a
                 key={link.href}
@@ -104,7 +105,7 @@ export default function SiteFooter() {
                 target="_blank"
                 rel="noopener noreferrer"
                 aria-label={link.label}
-                className="inline-flex h-6 w-6 items-center justify-center text-white/80 hover:text-[var(--brand-pink-hover)] transition-colors duration-250 ease-in-out"
+                className="inline-flex h-9 w-9 items-center justify-center text-white/80 hover:text-[var(--brand-pink-hover)] transition-colors duration-250 ease-in-out"
               >
                 {link.icon}
               </a>
