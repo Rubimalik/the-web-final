@@ -1,30 +1,22 @@
-import type { Metadata } from "next";
-import FeaturedProductsSection from "@/components/FeaturedProductsSection";
-import LocationHomePage from "@/components/LocationHomePage";
+import type { Metadata, Viewport } from "next";
+import AscotBerkshirePageContent from "./components/AscotBerkshirePageContent";
 
 export const metadata: Metadata = {
-  title: "Buy copier printer parts & toner Ascot Berkshire | BuySupply",
+  title: {
+    absolute: "Refurbished Canon Photocopiers & Canon Office Printers in Ascot Berkshire | BuySupply",
+  },
   description:
-    "Buy copier printer parts and toner in Ascot Berkshire. BuySupply supplies office equipment, printer parts, toner, and copier-related products.",
+    "BuySupply Ltd supply refurbished Canon imageRUNNER ADVANCE DX photocopiers, Canon multifunction office printers and genuine Canon toner cartridges to businesses throughout Ascot Berkshire and the surrounding premium commercial areas.",
   alternates: {
     canonical: "/ascot-berkshire",
   },
 };
 
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+};
+
 export default function AscotBerkshirePage() {
-  return (
-    <LocationHomePage
-      heroTitle="BUYSUPPLY"
-      tagline="Buy copier printer parts & toner Ascot Berkshire"
-      locationSpecificParagraph="Based near Ascot, we specialise in refurbished Canon imageRUNNER ADVANCE photocopiers, Canon office printers, multifunction devices, copier rentals, servicing, maintenance and genuine Canon consumables. Every machine is professionally tested, inspected and prepared by experienced technicians within our dedicated workshop facility before dispatch."
-      printersLink="/products?category=photocopiers"
-      consumablesLink="/products?category=consumables"
-      featuredSection={<FeaturedProductsSection />}
-      sellToUsHref="/sell-to-us#sell-form"
-      contactHref="/contact"
-      contactLabel="Contact Our Team"
-      showNavigation
-      showFooter
-    />
-  );
+  return <AscotBerkshirePageContent />;
 }

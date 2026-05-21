@@ -1,30 +1,60 @@
-import type { Metadata } from "next";
-import FeaturedProductsSection from "@/components/FeaturedProductsSection";
-import LocationHomePage from "@/components/LocationHomePage";
+import type { Metadata, Viewport } from "next";
+import NavBar from "@/components/Navbar";
+import SiteFooter from "@/components/SiteFooter";
+import WindsorHeroSection from "./components/WindsorHeroSection";
+import WindsorOverviewSection from "./components/WindsorOverviewSection";
+import CanonSpecialistsSection from "./components/CanonSpecialistsSection";
+import PopularCanonModelsSection from "./components/PopularCanonModelsSection";
+import CostSavingSection from "./components/CostSavingSection";
+import RentalSection from "./components/RentalSection";
+import FilmTvMediaSection from "./components/FilmTvMediaSection";
+import ServicingMaintenanceSection from "./components/ServicingMaintenanceSection";
+import CanonPartsSection from "./components/CanonPartsSection";
+import ManagedPrintSection from "./components/ManagedPrintSection";
+import NearbyWorkshopSection from "./components/NearbyWorkshopSection";
+import UkExportSection from "./components/UkExportSection";
+import WhyChooseSection from "./components/WhyChooseSection";
+import AreasCoveredSection from "./components/AreasCoveredSection";
+import FaqSection from "./components/FaqSection";
+import ContactSection from "./components/ContactSection";
 
 export const metadata: Metadata = {
-  title: "Buy copier printer parts & toner Windsor Berkshire | BuySupply",
+  title: {
+    absolute: "Refurbished Canon Photocopiers Windsor Berkshire | BuySupply",
+  },
   description:
-    "Buy copier printer parts and toner in Windsor Berkshire. BuySupply supplies office equipment, printer parts, toner, and copier-related products.",
+    "Refurbished Canon photocopiers, printers, rentals, servicing, toners and parts in Windsor Berkshire from BuySupply Ltd.",
   alternates: {
     canonical: "/windsor-berkshire",
   },
 };
 
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+};
+
 export default function WindsorBerkshirePage() {
   return (
-    <LocationHomePage
-      heroTitle="BUYSUPPLY"
-      tagline="Buy copier printer parts & toner Windsor Berkshire"
-      locationSpecificParagraph="Based near Windsor, we specialise in refurbished Canon imageRUNNER ADVANCE photocopiers, Canon office printers, multifunction devices, copier rentals, servicing, maintenance and genuine Canon consumables. Every machine is professionally tested, inspected and prepared by experienced technicians within our dedicated workshop facility before dispatch."
-      printersLink="/products?category=photocopiers"
-      consumablesLink="/products?category=consumables"
-      featuredSection={<FeaturedProductsSection />}
-      sellToUsHref="/sell-to-us#sell-form"
-      contactHref="/contact"
-      contactLabel="Contact Our Team"
-      showNavigation
-      showFooter
-    />
+    <main className="min-h-screen overflow-x-hidden bg-white text-black font-myriad">
+      <NavBar />
+      <WindsorHeroSection />
+      <WindsorOverviewSection />
+      <CanonSpecialistsSection />
+      <PopularCanonModelsSection />
+      <CostSavingSection />
+      <RentalSection />
+      <FilmTvMediaSection />
+      <ServicingMaintenanceSection />
+      <CanonPartsSection />
+      <ManagedPrintSection />
+      <NearbyWorkshopSection />
+      <UkExportSection />
+      <WhyChooseSection />
+      <AreasCoveredSection />
+      <FaqSection />
+      <ContactSection />
+      <SiteFooter />
+    </main>
   );
 }

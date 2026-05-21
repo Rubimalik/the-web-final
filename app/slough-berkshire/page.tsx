@@ -1,30 +1,22 @@
-import type { Metadata } from "next";
-import FeaturedProductsSection from "@/components/FeaturedProductsSection";
-import LocationHomePage from "@/components/LocationHomePage";
+import type { Metadata, Viewport } from "next";
+import SloughBerkshirePageContent from "./components/SloughBerkshirePageContent";
 
 export const metadata: Metadata = {
-  title: "Buy copier printer parts & toner Slough Berkshire | BuySupply",
+  title: {
+    absolute: "Refurbished Canon Photocopiers & Office Printers in Slough Berkshire | BuySupply",
+  },
   description:
-    "Buy copier printer parts and toner in Slough Berkshire. BuySupply supplies office equipment, printer parts, toner, and copier-related products.",
+    "Searching for reliable refurbished Canon photocopiers and office printers in Slough Berkshire? BuySupply Ltd are one of the area’s leading suppliers of refurbished Canon multifunction photocopiers, office printers, toners, inks and parts for businesses throughout Slough, Burnham, Langley, Windsor, Maidenhead and West London.",
   alternates: {
     canonical: "/slough-berkshire",
   },
 };
 
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+};
+
 export default function SloughBerkshirePage() {
-  return (
-    <LocationHomePage
-      heroTitle="BUYSUPPLY"
-      tagline="Buy copier printer parts & toner Slough Berkshire"
-      locationSpecificParagraph="Based near the Slough Trading Estate in Burnham, Slough, we specialise in refurbished Canon imageRUNNER ADVANCE photocopiers, Canon office printers, multifunction devices, copier rentals, servicing, maintenance and genuine Canon consumables. Every machine is professionally tested, inspected and prepared by experienced technicians within our dedicated workshop facility before dispatch."
-      printersLink="/products?category=photocopiers"
-      consumablesLink="/products?category=consumables"
-      featuredSection={<FeaturedProductsSection />}
-      sellToUsHref="/sell-to-us#sell-form"
-      contactHref="/contact"
-      contactLabel="Contact Our Team"
-      showNavigation
-      showFooter
-    />
-  );
+  return <SloughBerkshirePageContent />;
 }

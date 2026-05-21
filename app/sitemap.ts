@@ -16,6 +16,7 @@ const locationPages = [
   "/ascot-berkshire",
   "/reading-berkshire",
   "/slough-trading-estate",
+  "/heathrow-airport",
 ];
 
 async function getAllProducts() {

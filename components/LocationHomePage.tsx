@@ -161,7 +161,11 @@ export default function LocationHomePage({
               <Link href="/reading-berkshire" className="brand-accent-link">
                 Reading
               </Link>
-              , Heathrow, West London and the entire UK with nationwide delivery, installation and ongoing support available.
+              ,{" "}
+              <Link href="/heathrow-airport" className="brand-accent-link">
+                Heathrow
+              </Link>
+              , West London and the entire UK with nationwide delivery, installation and ongoing support available.
             </p>
             <p>
               Whether you are looking to buy a refurbished Canon photocopier in{" "}

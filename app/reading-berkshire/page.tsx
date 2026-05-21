@@ -1,30 +1,23 @@
-import type { Metadata } from "next";
-import FeaturedProductsSection from "@/components/FeaturedProductsSection";
-import LocationHomePage from "@/components/LocationHomePage";
+import type { Metadata, Viewport } from "next";
+import ReadingBerkshirePageContent from "./components/ReadingBerkshirePageContent";
 
 export const metadata: Metadata = {
-  title: "Buy copier printer parts & toner Reading Berkshire | BuySupply",
+  title: {
+    absolute:
+      "Canon Office Photocopiers & Refurbished Canon Printers in Reading Berkshire | BuySupply",
+  },
   description:
-    "Buy copier printer parts and toner in Reading Berkshire. BuySupply supplies office equipment, printer parts, toner, and copier-related products.",
+    "Businesses across Reading Berkshire looking for reliable Canon office photocopiers and refurbished Canon multifunction printers choose BuySupply Ltd for dependable office printing systems, genuine Canon consumables and professional technical support.",
   alternates: {
     canonical: "/reading-berkshire",
   },
 };
 
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+};
+
 export default function ReadingBerkshirePage() {
-  return (
-    <LocationHomePage
-      heroTitle="BUYSUPPLY"
-      tagline="Buy copier printer parts & toner Reading Berkshire"
-      locationSpecificParagraph="Based near Reading, we specialise in refurbished Canon imageRUNNER ADVANCE photocopiers, Canon office printers, multifunction devices, copier rentals, servicing, maintenance and genuine Canon consumables. Every machine is professionally tested, inspected and prepared by experienced technicians within our dedicated workshop facility before dispatch."
-      printersLink="/products?category=photocopiers"
-      consumablesLink="/products?category=consumables"
-      featuredSection={<FeaturedProductsSection />}
-      sellToUsHref="/sell-to-us#sell-form"
-      contactHref="/contact"
-      contactLabel="Contact Our Team"
-      showNavigation
-      showFooter
-    />
-  );
+  return <ReadingBerkshirePageContent />;
 }

@@ -6,6 +6,8 @@
  * Requires: SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY in .env.local
  */
 
+/* eslint-disable @typescript-eslint/no-require-imports */
+
 const fs = require('fs');
 const path = require('path');
 
@@ -43,7 +45,7 @@ if (!projectRef) {
   process.exit(1);
 }
 
-async function executeSql(sql, migrationName) {
+async function executeSql(sql) {
   const managementApiUrl = `https://api.supabase.com/v1/projects/${projectRef}/database/query`;
   
   const response = await fetch(managementApiUrl, {
@@ -91,7 +93,7 @@ async function pushMigrations() {
     console.log(`Executing: ${file}`);
     const sql = fs.readFileSync(path.join(migrationsDir, file), 'utf-8');
     try {
-      await executeSql(sql, file);
+      await executeSql(sql);
       console.log(`  ✅ Success\n`);
       successCount++;
     } catch (error) {

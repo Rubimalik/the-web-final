@@ -3,6 +3,8 @@
  * Usage: node scripts/push-migrations.js
  */
 
+/* eslint-disable @typescript-eslint/no-require-imports */
+
 const fs = require('fs');
 const path = require('path');
 const dotenv = require('dotenv');
@@ -19,8 +21,6 @@ if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
 }
 
 async function executeSql(sql, migrationName) {
-  const url = new URL('/rest/v1/', SUPABASE_URL);
-  
   // First try to use the PostgREST query endpoint
   const response = await fetch(`${SUPABASE_URL}/rest/v1/`, {
     method: 'POST',

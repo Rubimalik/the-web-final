@@ -53,8 +53,10 @@ async function pushMigrations() {
     try {
       await executeSql(sql, file);
       console.log(`  ✓ Success`);
-    } catch (error: any) {
-      console.error(`  ✗ Failed: ${error.message}`);
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : String(error);
+
+      console.error(`  ✗ Failed: ${message}`);
       // Continue with next migration
     }
   }
