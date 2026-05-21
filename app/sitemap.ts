@@ -9,6 +9,15 @@ type SitemapProduct = {
   updatedAt?: string | null;
 };
 
+const locationPages = [
+  "/slough-berkshire",
+  "/windsor-berkshire",
+  "/maidenhead-berkshire",
+  "/ascot-berkshire",
+  "/reading-berkshire",
+  "/slough-trading-estate",
+];
+
 async function getAllProducts() {
   try {
     const res = await fetch(`${BASE_URL}/api/product?status=active&limit=1000&page=1`, {
@@ -75,42 +84,12 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       changeFrequency: "daily",
       priority: 0.8,
     },
-    {
-      url: `${BASE_URL}/slough-berkshire`,
+    ...locationPages.map((path) => ({
+      url: `${BASE_URL}${path}`,
       lastModified: new Date(),
-      changeFrequency: "weekly",
+      changeFrequency: "weekly" as const,
       priority: 0.7,
-    },
-    {
-      url: `${BASE_URL}/windsor-berkshire`,
-      lastModified: new Date(),
-      changeFrequency: "weekly",
-      priority: 0.7,
-    },
-    {
-      url: `${BASE_URL}/maidenhead-berkshire`,
-      lastModified: new Date(),
-      changeFrequency: "weekly",
-      priority: 0.7,
-    },
-    {
-      url: `${BASE_URL}/ascot-berkshire`,
-      lastModified: new Date(),
-      changeFrequency: "weekly",
-      priority: 0.7,
-    },
-    {
-      url: `${BASE_URL}/reading-berkshire`,
-      lastModified: new Date(),
-      changeFrequency: "weekly",
-      priority: 0.7,
-    },
-    {
-      url: `${BASE_URL}/slough-trading-estate`,
-      lastModified: new Date(),
-      changeFrequency: "weekly",
-      priority: 0.7,
-    },
+    })),
   ];
 
   // Dynamic product pages

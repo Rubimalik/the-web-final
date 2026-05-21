@@ -137,10 +137,46 @@ export default function LocationHomePage({
             </p>
             <p>{locationSpecificParagraph}</p>
             <p>
-              We proudly supply businesses throughout Slough, Slough Trading Estate, Burnham, Maidenhead, Windsor, Ascot, Reading, Heathrow, West London and the entire UK with nationwide delivery, installation and ongoing support available.
+              We proudly supply businesses throughout{" "}
+              <Link href="/slough-berkshire" className="brand-accent-link">
+                Slough
+              </Link>
+              ,{" "}
+              <Link href="/slough-trading-estate" className="brand-accent-link">
+                Slough Trading Estate
+              </Link>
+              , Burnham,{" "}
+              <Link href="/maidenhead-berkshire" className="brand-accent-link">
+                Maidenhead
+              </Link>
+              ,{" "}
+              <Link href="/windsor-berkshire" className="brand-accent-link">
+                Windsor
+              </Link>
+              ,{" "}
+              <Link href="/ascot-berkshire" className="brand-accent-link">
+                Ascot
+              </Link>
+              ,{" "}
+              <Link href="/reading-berkshire" className="brand-accent-link">
+                Reading
+              </Link>
+              , Heathrow, West London and the entire UK with nationwide delivery, installation and ongoing support available.
             </p>
             <p>
-              Whether you are looking to buy a refurbished Canon photocopier in Maidenhead, rent a Canon printer in Ascot, source office photocopiers near Slough Trading Estate or upgrade your office print equipment anywhere in the UK, BuySupply provide reliable equipment, competitive pricing and expert support backed by decades of industry experience.
+              Whether you are looking to buy a refurbished Canon photocopier in{" "}
+              <Link href="/maidenhead-berkshire" className="brand-accent-link">
+                Maidenhead
+              </Link>
+              , rent a Canon printer in{" "}
+              <Link href="/ascot-berkshire" className="brand-accent-link">
+                Ascot
+              </Link>
+              , source office photocopiers near{" "}
+              <Link href="/slough-trading-estate" className="brand-accent-link">
+                Slough Trading Estate
+              </Link>
+              {" "}or upgrade your office print equipment anywhere in the UK, BuySupply provide reliable equipment, competitive pricing and expert support backed by decades of industry experience.
             </p>
           </div>
 
