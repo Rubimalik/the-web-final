@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 import AnimatedSection from "./AnimatedSection";
 
 type SectionWrapperProps = {
-  eyebrow: string;
+  eyebrow?: string;
   title: string;
   children: ReactNode;
   className?: string;
@@ -15,16 +15,13 @@ export default function SectionWrapper({
   className = "",
 }: SectionWrapperProps) {
   return (
-    <section className={`border-t border-black/10 px-4 py-14 sm:py-18 lg:py-20 ${className}`}>
-      <AnimatedSection className="mx-auto max-w-6xl">
-        <div className="mx-auto max-w-3xl text-center">
-          <p className="mb-4 inline-flex items-center gap-2 rounded-full border border-[rgba(0,207,255,0.28)] bg-white px-4 py-2 text-xs font-bold uppercase tracking-[0.16em] text-black shadow-sm">
-            <span className="h-1.5 w-1.5 rounded-full bg-[var(--brand-cyan)]" />
-            {eyebrow}
-          </p>
-          <h2 className="text-3xl font-bold leading-tight text-black sm:text-4xl">{title}</h2>
+    <section className={`local-section-shell px-5 py-16 sm:px-6 sm:py-20 lg:px-8 lg:py-24 ${className}`}>
+      <AnimatedSection className="mx-auto max-w-[76rem]">
+        <div className="mx-auto max-w-4xl text-center">
+          <h2 className="local-section-heading text-3xl font-bold leading-tight sm:text-4xl lg:text-[2.75rem]">{title}</h2>
+          <span className="mx-auto mt-4 block h-1 w-20 rounded-full bg-[var(--brand-pink-hover)] sm:mt-5" />
         </div>
-        <div className="mt-8 sm:mt-10">{children}</div>
+        <div className="mt-10 sm:mt-12">{children}</div>
       </AnimatedSection>
     </section>
   );

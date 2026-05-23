@@ -52,7 +52,7 @@ export default function AnimatedCard({
       ref={(node: HTMLElement | null) => {
         ref.current = node;
       }}
-      className={`transition-[opacity,transform] ease-out motion-reduce:transition-none ${className}`}
+      className={`local-card-hover transition-[opacity,transform] ease-out motion-reduce:transition-none ${className}`}
       style={{
         opacity: isVisible || reduceMotion ? 1 : 0,
         transform: isVisible || reduceMotion ? "translateY(0)" : "translateY(14px)",
