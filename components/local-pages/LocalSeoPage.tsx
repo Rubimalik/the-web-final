@@ -194,15 +194,19 @@ function IntroSection({ content }: { content: LocalPageContent }) {
             <span className="local-overview-dots absolute left-1 top-[18%] h-32 w-28" aria-hidden="true" />
             <span className="absolute inset-x-2 bottom-4 top-4 rounded-full bg-[rgba(220,242,255,0.76)]" aria-hidden="true" />
             <Image
-              src="/images/copier-cutout.png"
-              alt="Canon office printer"
-              width={1254}
-              height={1254}
-              className="relative z-10 h-auto max-h-[22rem] w-full object-contain drop-shadow-[0_24px_28px_rgba(8,32,56,0.18)] lg:max-h-[24rem]"
+              src="/images/canon-copier-cutout-balanced.png"
+              alt="Canon imageRUNNER ADVANCE DX copier product"
+              width={980}
+              height={1178}
+              className="relative z-10 h-auto max-h-[19.5rem] w-auto max-w-[94%] object-contain drop-shadow-[0_24px_28px_rgba(8,32,56,0.18)] sm:max-h-[22.5rem] lg:max-h-[24.5rem]"
             />
-            <span className="local-printer-badge absolute bottom-2 right-1 z-20 flex h-24 w-24 items-center justify-center rounded-full bg-white/95 shadow-[0_18px_38px_color-mix(in_srgb,var(--brand-pink-hover)_14%,transparent)] sm:bottom-5 sm:h-28 sm:w-28">
-              <Printer className="h-10 w-10" aria-hidden="true" />
-              <BadgeCheck className="absolute bottom-3 right-3 h-6 w-6 rounded-full fill-[var(--brand-pink-hover)] text-white" aria-hidden="true" />
+            <span className="absolute bottom-2 left-4 right-4 z-20 rounded-lg border border-black/10 bg-white/95 px-4 py-3 text-left shadow-[0_18px_38px_rgba(8,32,56,0.14)] sm:bottom-4 sm:left-auto sm:right-2 sm:w-[15rem]">
+              <span className="block text-sm font-bold leading-5 text-black">
+                imageRUNNER Advance DX
+              </span>
+              <span className="mt-1 block text-xs font-semibold leading-5 text-black/60">
+                C3720i / C3725i / C3730i
+              </span>
             </span>
           </AnimatedCard>
         </div>

@@ -1,6 +1,4 @@
-import { Printer } from "lucide-react";
-import { canonModels } from "../data";
-import IconCard from "./IconCard";
+import Image from "next/image";
 import SectionWrapper from "./SectionWrapper";
 
 export default function PopularCanonModelsSection() {
@@ -20,8 +18,34 @@ export default function PopularCanonModelsSection() {
             Canon imageRUNNER ADVANCE DX
           </span>
         </div>
-        <div className="grid auto-rows-fr gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          {canonModels.map((model) => <IconCard key={model} icon={Printer} title={model} />)}
+        <div className="grid gap-5 rounded-lg border border-black/10 bg-white p-5 shadow-sm sm:p-6 lg:grid-cols-[0.9fr_1.1fr] lg:items-center">
+          <div className="relative mx-auto flex w-full max-w-sm items-center justify-center overflow-hidden rounded-lg bg-[#f7f9fb] px-4 py-6 sm:px-6 lg:max-w-none">
+            <Image
+              src="/images/canon-copier-cutout-balanced.png"
+              alt="Canon imageRUNNER ADVANCE DX copier product"
+              width={980}
+              height={1178}
+              className="h-auto max-h-[320px] w-full object-contain"
+              sizes="(min-width: 1024px) 38vw, (min-width: 640px) 60vw, 88vw"
+            />
+          </div>
+          <div className="space-y-3 text-center lg:text-left">
+            <p className="text-sm font-bold uppercase tracking-[0.16em] text-[var(--brand-cyan)]">
+              Featured refurbished range
+            </p>
+            <div className="space-y-1">
+              <h3 className="text-2xl font-bold leading-tight text-black sm:text-3xl">
+                imageRUNNER Advance DX
+              </h3>
+              <p className="text-lg font-semibold leading-7 text-black/68 sm:text-xl">
+                C3720i / C3725i / C3730i
+              </p>
+            </div>
+            <p className="mx-auto max-w-xl text-base leading-7 text-black/65 lg:mx-0">
+              A realistic product-style view of the Canon copier range commonly selected for
+              professional office print, copy and scan workflows.
+            </p>
+          </div>
         </div>
         <div className="grid gap-4 rounded-lg border border-[rgba(0,207,255,0.24)] bg-white p-5 shadow-sm sm:p-6 lg:grid-cols-[1fr_0.65fr] lg:items-center">
           <p className="text-base leading-7 text-black/72 sm:text-lg sm:leading-8">
