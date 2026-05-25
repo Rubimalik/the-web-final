@@ -162,10 +162,14 @@ function LocalSection({ section }: { section: LocalContentSection }) {
 }
 
 function IntroSection({ content }: { content: LocalPageContent }) {
+  const introGridClass = content.introVisual
+    ? "md:grid-cols-[minmax(0,1.05fr)_minmax(20rem,0.95fr)] lg:grid-cols-[minmax(0,1.02fr)_minmax(24rem,0.98fr)]"
+    : "md:grid-cols-[minmax(0,1.34fr)_minmax(15rem,0.72fr)] lg:grid-cols-[minmax(0,1.46fr)_minmax(18rem,0.74fr)]";
+
   return (
     <SectionWrapper eyebrow="Local overview" title={content.title} className="bg-[#f7f8fa]">
       <AnimatedCard className="local-overview-open p-1 sm:p-2">
-        <div className="grid gap-8 p-1 sm:p-2 md:grid-cols-[minmax(0,1.34fr)_minmax(15rem,0.72fr)] md:items-center lg:grid-cols-[minmax(0,1.46fr)_minmax(18rem,0.74fr)] lg:gap-8">
+        <div className={`grid gap-8 p-1 sm:p-2 md:items-center lg:gap-8 ${introGridClass}`}>
           <div className="space-y-0 text-base leading-7 text-black/76 sm:text-[1.0625rem] sm:leading-8">
             {content.introParagraphs.map((paragraph, index) => {
               const Icon = introTimelineIcons[index % introTimelineIcons.length];
@@ -187,28 +191,45 @@ function IntroSection({ content }: { content: LocalPageContent }) {
             })}
           </div>
 
-          <AnimatedCard
-            delay={0.16}
-            className="local-overview-printer relative mx-auto flex min-h-[17rem] w-full max-w-[24rem] items-end justify-center px-4 pb-0 pt-7 sm:min-h-[21rem] md:min-h-[22rem] md:px-2 lg:min-h-[25rem] lg:px-5"
-          >
-            <span className="local-overview-dots absolute left-1 top-[18%] h-32 w-28" aria-hidden="true" />
-            <span className="absolute inset-x-2 bottom-4 top-4 rounded-full bg-[rgba(220,242,255,0.76)]" aria-hidden="true" />
-            <Image
-              src="/images/canon-copier-cutout-balanced.png"
-              alt="Canon imageRUNNER ADVANCE DX copier product"
-              width={980}
-              height={1178}
-              className="relative z-10 h-auto max-h-[19.5rem] w-auto max-w-[94%] object-contain drop-shadow-[0_24px_28px_rgba(8,32,56,0.18)] sm:max-h-[22.5rem] lg:max-h-[24.5rem]"
-            />
-            <span className="absolute bottom-2 left-4 right-4 z-20 rounded-lg border border-black/10 bg-white/95 px-4 py-3 text-left shadow-[0_18px_38px_rgba(8,32,56,0.14)] sm:bottom-4 sm:left-auto sm:right-2 sm:w-[15rem]">
-              <span className="block text-sm font-bold leading-5 text-black">
-                imageRUNNER Advance DX
+          {content.introVisual ? (
+            <AnimatedCard
+              delay={0.16}
+              className="relative mx-auto flex w-full max-w-[30rem] items-center justify-center md:max-w-[34rem] lg:max-w-[38rem]"
+            >
+              <Image
+                src={content.introVisual.src}
+                alt={content.introVisual.alt}
+                width={content.introVisual.width}
+                height={content.introVisual.height}
+                unoptimized
+                className="h-auto w-full object-contain"
+                sizes="(min-width: 1024px) 32rem, (min-width: 768px) 27rem, 92vw"
+              />
+            </AnimatedCard>
+          ) : (
+            <AnimatedCard
+              delay={0.16}
+              className="local-overview-printer relative mx-auto flex min-h-[17rem] w-full max-w-[24rem] items-end justify-center px-4 pb-0 pt-7 sm:min-h-[21rem] md:min-h-[22rem] md:px-2 lg:min-h-[25rem] lg:px-5"
+            >
+              <span className="local-overview-dots absolute left-1 top-[18%] h-32 w-28" aria-hidden="true" />
+              <span className="absolute inset-x-2 bottom-4 top-4 rounded-full bg-[rgba(220,242,255,0.76)]" aria-hidden="true" />
+              <Image
+                src="/images/canon-copier-cutout-balanced.png"
+                alt="Canon imageRUNNER ADVANCE DX copier product"
+                width={980}
+                height={1178}
+                className="relative z-10 h-auto max-h-[19.5rem] w-auto max-w-[94%] object-contain drop-shadow-[0_24px_28px_rgba(8,32,56,0.18)] sm:max-h-[22.5rem] lg:max-h-[24.5rem]"
+              />
+              <span className="absolute bottom-2 left-4 right-4 z-20 rounded-lg border border-black/10 bg-white/95 px-4 py-3 text-left shadow-[0_18px_38px_rgba(8,32,56,0.14)] sm:bottom-4 sm:left-auto sm:right-2 sm:w-[15rem]">
+                <span className="block text-sm font-bold leading-5 text-black">
+                  imageRUNNER Advance DX
+                </span>
+                <span className="mt-1 block text-xs font-semibold leading-5 text-black/60">
+                  C3720i / C3725i / C3730i
+                </span>
               </span>
-              <span className="mt-1 block text-xs font-semibold leading-5 text-black/60">
-                C3720i / C3725i / C3730i
-              </span>
-            </span>
-          </AnimatedCard>
+            </AnimatedCard>
+          )}
         </div>
 
       </AnimatedCard>

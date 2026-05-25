@@ -2,6 +2,12 @@ import type { LocalPageContent } from "@/components/local-pages/types";
 
 export const ascotBerkshireContent: LocalPageContent = {
   title: "Refurbished Canon Photocopiers & Canon Office Printers in Ascot Berkshire",
+  introVisual: {
+    src: "/images/canon-imagerunner-advance-dx-c3720i-c3725i-c3730i.jpeg",
+    alt: "imageRUNNER Advance DX C3720i, C3725i and C3730i Canon office printer",
+    width: 918,
+    height: 670,
+  },
   introParagraphs: [
     "BuySupply Ltd supply refurbished Canon imageRUNNER ADVANCE DX photocopiers, Canon multifunction office printers and genuine Canon toner cartridges to businesses throughout Ascot Berkshire and the surrounding premium commercial areas.",
     "We regularly support offices, hospitality venues, golf clubs, private healthcare providers, estate agents, schools and professional businesses located around Ascot Racecourse, Wentworth Golf Club, Virginia Water, Sunningdale and the wider Berkshire region.",
@@ -18,19 +24,19 @@ export const ascotBerkshireContent: LocalPageContent = {
         {
           intro: "Popular Canon DX office printer models include:",
           items: [
+            "Canon imageRUNNER ADVANCE DX C257i",
+            "Canon imageRUNNER ADVANCE DX C357i",
             "Canon imageRUNNER ADVANCE DX C259i",
-            "Canon imageRUNNER ADVANCE DX C3700 Series",
+            "Canon imageRUNNER ADVANCE DX C359i",
             "Canon imageRUNNER ADVANCE DX C3725i",
+            "Canon imageRUNNER ADVANCE DX C3730i",
             "Canon imageRUNNER ADVANCE DX C3822i",
-            "Canon imageRUNNER ADVANCE DX C3926i",
-            "Canon imageRUNNER ADVANCE DX C5840i",
-            "Canon imageRUNNER ADVANCE DX C5850i",
+            "Canon imageRUNNER ADVANCE DX C3830i",
+            "Canon imageRUNNER ADVANCE DX C5735i",
+            "Canon imageRUNNER ADVANCE DX C5740i",
+            "Canon imageRUNNER ADVANCE DX C5750i",
             "Canon imageRUNNER ADVANCE DX C5860i",
             "Canon imageRUNNER ADVANCE DX 4735i",
-            "Canon imageRUNNER ADVANCE DX 4825i",
-            "Canon imageRUNNER ADVANCE DX 4945i",
-            "Canon imageRUNNER ADVANCE DX 619i",
-            "Canon imageRUNNER ADVANCE DX 6980i",
           ],
         },
       ],

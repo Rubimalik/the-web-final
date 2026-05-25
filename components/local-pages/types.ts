@@ -32,6 +32,12 @@ export type LocalFaq = {
 export type LocalPageContent = {
   title: string;
   introParagraphs: string[];
+  introVisual?: {
+    src: string;
+    alt: string;
+    width: number;
+    height: number;
+  };
   sections: LocalContentSection[];
   faqs: LocalFaq[];
   contact: {
