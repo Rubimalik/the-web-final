@@ -14,7 +14,7 @@ import AnimatedCard from "./AnimatedCard";
 import CheckList from "./CheckList";
 import LocalHero from "./LocalHero";
 import SectionWrapper from "./SectionWrapper";
-import type { LocalContentSection, LocalPageContent } from "./types";
+import type { LocalContentSection, LocalModelGroup, LocalPageContent } from "./types";
 
 type LocalSeoPageProps = {
   content: LocalPageContent;
@@ -22,6 +22,95 @@ type LocalSeoPageProps = {
 
 const introTimelineIcons = [Building2, UsersRound, BadgeCheck];
 const businessSolutionIcons = [Building2, Printer];
+
+function ModelShowcaseGroup({
+  group,
+  index,
+}: {
+  group: LocalModelGroup;
+  index: number;
+}) {
+  const reverseLayout = index % 2 === 1;
+
+  return (
+    <AnimatedCard
+      as="article"
+      delay={Math.min(index * 0.08, 0.2)}
+      className="location-business-card overflow-hidden"
+    >
+      <div className="grid gap-0 lg:grid-cols-[0.88fr_1.12fr] lg:items-stretch">
+        <div
+          className={`flex min-h-[18rem] items-center justify-center bg-[#f7f8fa] p-6 sm:p-8 ${
+            reverseLayout ? "lg:order-2" : ""
+          }`}
+        >
+          <Image
+            src={group.image.src}
+            alt={group.image.alt}
+            width={group.image.width}
+            height={group.image.height}
+            className="h-auto max-h-[21rem] w-full object-contain"
+            sizes="(min-width: 1024px) 28rem, (min-width: 640px) 70vw, 88vw"
+          />
+        </div>
+        <div className="flex flex-col justify-center p-6 sm:p-8 lg:p-10">
+          <h3 className="text-2xl font-bold leading-tight text-black sm:text-3xl">
+            {group.title}
+          </h3>
+          <p className="mt-4 text-base leading-7 text-black/72 sm:text-lg sm:leading-8">
+            {group.description}
+          </p>
+          <ul className="mt-6 grid gap-3 sm:grid-cols-2">
+            {group.models.map((model) => (
+              <li key={model} className="flex items-start gap-3 text-sm leading-6 text-black/72 sm:text-base">
+                <span className="mt-0.5 inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-[rgba(0,207,255,0.1)]">
+                  <CheckCircle2 className="h-4 w-4 text-[var(--brand-cyan)]" aria-hidden="true" />
+                </span>
+                <span>{model}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      </div>
+    </AnimatedCard>
+  );
+}
+
+function ModelShowcaseSection({ section }: { section: LocalContentSection }) {
+  return (
+    <SectionWrapper eyebrow={section.eyebrow} title={section.heading} className="bg-[#f7f8fa]">
+      <div className="mx-auto max-w-[76rem] space-y-9 lg:space-y-10">
+        {section.paragraphs?.length ? (
+          <AnimatedCard className="max-w-5xl space-y-4 border-l-2 border-[rgba(8,122,193,0.16)] pl-5 text-base leading-7 text-black/72 sm:pl-7 sm:text-lg sm:leading-8">
+            {section.paragraphs.map((paragraph) => (
+              <p key={paragraph}>{paragraph}</p>
+            ))}
+          </AnimatedCard>
+        ) : null}
+
+        <div className="space-y-6">
+          {section.modelGroups?.map((group, index) => (
+            <ModelShowcaseGroup key={group.title} group={group} index={index} />
+          ))}
+        </div>
+
+        {section.closingParagraphs?.length ? (
+          <div className="grid gap-4">
+            {section.closingParagraphs.map((paragraph, index) => (
+              <AnimatedCard
+                key={paragraph}
+                delay={Math.min(index * 0.05, 0.15)}
+                className="border-l-2 border-[color-mix(in_srgb,var(--brand-pink-hover)_14%,transparent)] pl-5 text-base leading-7 text-black/72 sm:pl-6 sm:text-lg sm:leading-8"
+              >
+                {paragraph}
+              </AnimatedCard>
+            ))}
+          </div>
+        ) : null}
+      </div>
+    </SectionWrapper>
+  );
+}
 
 function BusinessSolutionsSection({ section }: { section: LocalContentSection }) {
   return (
@@ -98,6 +187,10 @@ function BusinessSolutionsSection({ section }: { section: LocalContentSection })
 }
 
 function LocalSection({ section }: { section: LocalContentSection }) {
+  if (section.variant === "models" && section.modelGroups?.length) {
+    return <ModelShowcaseSection section={section} />;
+  }
+
   if (section.variant === "business") {
     return <BusinessSolutionsSection section={section} />;
   }

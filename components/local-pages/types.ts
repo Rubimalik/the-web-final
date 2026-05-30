@@ -3,6 +3,18 @@ export type LocalList = {
   items: string[];
 };
 
+export type LocalModelGroup = {
+  title: string;
+  models: string[];
+  description: string;
+  image: {
+    src: string;
+    alt: string;
+    width: number;
+    height: number;
+  };
+};
+
 export type LocalSectionVariant =
   | "models"
   | "business"
@@ -20,6 +32,7 @@ export type LocalContentSection = {
   heading: string;
   paragraphs?: string[];
   lists?: LocalList[];
+  modelGroups?: LocalModelGroup[];
   closingParagraphs?: string[];
   variant: LocalSectionVariant;
 };
