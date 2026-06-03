@@ -60,6 +60,7 @@ export async function GET(req: NextRequest) {
       consumableBrand,
       consumableType,
       allowedVisibilities: isAdmin ? undefined : ["public", "both"],
+      excludeKonicaMinolta: !isAdmin,
     };
 
     let { data: products, total } = await listProducts(productFilters);

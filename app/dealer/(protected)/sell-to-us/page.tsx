@@ -9,7 +9,7 @@ export default function DealerSellToUsPage() {
       <p>We provide nationwide collection, top market prices, and fast payment, helping businesses across the UK turn surplus equipment into immediate cash.</p>
       <h3 className="text-xl font-semibold text-white">We Buy Used Photocopiers â€“ All Brands Wanted</h3>
       <p>We purchase used photocopiers and printers across the UK every week, including all major brands:</p>
-      <p>Ricoh, Canon, Konica Minolta, Xerox, Toshiba, Sharp, Kyocera, Utax, and Develop.</p>
+      <p>Ricoh, Canon, Xerox, Toshiba, Sharp, Kyocera, Utax, and Develop.</p>
       <p>Whether you want to sell a single copier, multiple machines, or complete an office equipment clearance, BuySupply is ready to buy immediately.</p>
 
       <h3 className="text-xl font-semibold text-white">Sell Toner Cartridges & Printer Consumables UK</h3>
@@ -59,4 +59,3 @@ export default function DealerSellToUsPage() {
     </DealerSectionPageLayout>
   );
 }
-

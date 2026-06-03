@@ -1,5 +1,5 @@
 import { Metadata } from "next";
-import { redirect } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import ProductDetailPage from "@/components/ProductDetailClient";
 import {
   filterPublicProduct,
@@ -8,34 +8,71 @@ import {
   type PublicProductRecord,
 } from "@/lib/catalog-store";
 import { getProductImagePlaceholderUrl } from "@/lib/product-image-placeholder";
-import { getProductHref } from "@/lib/product-taxonomy";
+import {
+  PARTS_AND_TONERS_SLUG,
+  getPartsBrandBySlug,
+  getPartsTypeBySlug,
+  getProductHref,
+  isKonicaMinoltaProduct,
+} from "@/lib/product-taxonomy";
 
 const BASE_URL = "https://buysupply.me";
 const PRICE_VALID_UNTIL = "2026-12-31";
+
+export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
 
 function isNumericProductParam(value: string) {
   return /^\d+$/.test(value);
 }
 
-async function getPublicProduct(slug: string): Promise<PublicProductRecord | null> {
-  const product = isNumericProductParam(slug)
-    ? await getProductById(Number.parseInt(slug, 10), {
-        allowedVisibilities: ["public", "both"],
-      })
-    : await getProductBySlug(slug, {
-        allowedVisibilities: ["public", "both"],
-        status: "active",
-      });
+function getProductSlugParam(slug: string[]) {
+  if (slug.length === 1) return slug[0];
+  if (slug.length === 4 && slug[0] === PARTS_AND_TONERS_SLUG) return slug[3];
+  return "";
+}
 
-  if (!product || product.status !== "active") return null;
-  return filterPublicProduct(product);
+function getCategoryRedirect(slug: string[]) {
+  if (slug[0] !== PARTS_AND_TONERS_SLUG) return "";
+
+  if (slug.length === 1) return "/consumables";
+
+  const brand = getPartsBrandBySlug(slug[1]);
+  if (slug.length === 2 && brand) return `/consumables/${brand.slug}`;
+
+  const type = getPartsTypeBySlug(slug[2]);
+  if (slug.length === 3 && brand && type) return `/consumables/${brand.slug}/${type.slug}`;
+
+  return "";
+}
+
+async function getPublicProduct(slug: string): Promise<PublicProductRecord | null> {
+  try {
+    const product = isNumericProductParam(slug)
+      ? await getProductById(Number.parseInt(slug, 10), {
+          allowedVisibilities: ["public", "both"],
+          excludeKonicaMinolta: true,
+        })
+      : await getProductBySlug(slug, {
+          allowedVisibilities: ["public", "both"],
+          status: "active",
+          excludeKonicaMinolta: true,
+        });
+
+    if (!product || product.status !== "active" || isKonicaMinoltaProduct(product)) return null;
+    return filterPublicProduct(product);
+  } catch (error) {
+    console.error("[products detail] Failed to load public product", { slug, error });
+    return null;
+  }
 }
 
 export async function generateMetadata(
-  { params }: { params: Promise<{ slug: string }> },
+  { params }: { params: Promise<{ slug: string[] }> },
 ): Promise<Metadata> {
   const { slug } = await params;
-  const product = await getPublicProduct(slug);
+  const productSlug = getProductSlugParam(slug);
+  const product = productSlug ? await getPublicProduct(productSlug) : null;
 
   if (!product) {
     return {
@@ -47,7 +84,7 @@ export async function generateMetadata(
   const productHref = getProductHref(product);
   const primaryImg = product.images?.find((image) => image.isPrimary) ?? product.images?.[0];
   const fallbackImage = getProductImagePlaceholderUrl();
-  const price = product.price != null ? `£${Number(product.price).toFixed(2)}` : "POA";
+  const price = product.price != null ? `\u00a3${Number(product.price).toFixed(2)}` : "POA";
   const shortDesc = product.description
     ? product.description.slice(0, 160).replace(/\n/g, " ").trim()
     : `${product.name} available at BuySupply UK. ${price}.`;
@@ -119,18 +156,32 @@ function ProductSchema({ product }: { product: PublicProductRecord }) {
   );
 }
 
-export default async function Page({ params }: { params: Promise<{ slug: string }> }) {
+export default async function Page({ params }: { params: Promise<{ slug: string[] }> }) {
   const { slug } = await params;
-  const product = await getPublicProduct(slug);
+  const categoryRedirect = getCategoryRedirect(slug);
 
-  if (product && slug !== product.slug) {
-    redirect(getProductHref(product));
+  if (categoryRedirect) {
+    redirect(categoryRedirect);
+  }
+
+  const productSlug = getProductSlugParam(slug);
+  const product = productSlug ? await getPublicProduct(productSlug) : null;
+
+  if (!product) {
+    notFound();
+  }
+
+  const canonicalHref = getProductHref(product);
+  const currentHref = `/products/${slug.join("/")}`;
+
+  if (currentHref !== canonicalHref) {
+    redirect(canonicalHref);
   }
 
   return (
     <>
       {product ? <ProductSchema product={product} /> : null}
-      <ProductDetailPage productId={slug} />
+      <ProductDetailPage productId={productSlug} />
     </>
   );
 }

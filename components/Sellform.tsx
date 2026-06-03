@@ -214,7 +214,7 @@ export default function SellForm() {
                   Make <span className="text-black/45">*</span>
                 </label>
                 <input id="make" name="make" type="text" required
-                  placeholder="e.g. Ricoh, Canon, Konica" className={inputClass} />
+                  placeholder="e.g. Ricoh, Canon, Xerox" className={inputClass} />
               </div>
               <div className="flex flex-col gap-1.5">
                 <label htmlFor="productType" className={labelClass}>

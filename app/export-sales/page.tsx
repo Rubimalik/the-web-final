@@ -27,7 +27,6 @@ export default function ExportSalesPage() {
         <li>Canon</li>
         <li>Xerox</li>
         <li>Ricoh</li>
-        <li>Konica Minolta</li>
         <li>Toshiba</li>
         <li>And many more</li>
       </ul>
@@ -52,4 +51,3 @@ export default function ExportSalesPage() {
     </SectionPageLayout>
   );
 }
-

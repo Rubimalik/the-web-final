@@ -1,3 +1,5 @@
+export const PARTS_AND_TONERS_SLUG = "parts-and-toners";
+
 export const PRODUCT_MAIN_CATEGORIES = [
   { label: "Printers", slug: "photocopiers" },
   { label: "Consumables", slug: "consumables" },
@@ -51,6 +53,24 @@ export const PRODUCT_CATEGORY_SEEDS = [
   })),
 ] as const;
 
+export interface ProductTaxonomyCategory {
+  name?: string | null;
+  slug?: string | null;
+}
+
+export interface ProductTaxonomyProduct {
+  id?: number;
+  name: string;
+  slug?: string | null;
+  tags?: string | null;
+  category?: ProductTaxonomyCategory | null;
+}
+
+export interface ProductBreadcrumb {
+  label: string;
+  href: string;
+}
+
 export function slugifyProductName(value: string) {
   const slug = value
     .toLowerCase()
@@ -70,12 +90,24 @@ export function getProductSlug(product: { id?: number; name: string; slug?: stri
   return typeof product.id === "number" ? `${baseSlug}-${product.id}` : baseSlug;
 }
 
-export function getProductHref(product: { id?: number; name: string; slug?: string | null }) {
-  return `/products/${getProductSlug(product)}`;
+export function isKonicaMinoltaProduct(product: ProductTaxonomyProduct) {
+  const text = normalizeSearchText(product);
+  return /\b(konica|minolta|bizhub)\b/.test(text);
+}
+
+export function getProductHref(product: ProductTaxonomyProduct) {
+  const categoryPath = getNormalizedProductCategoryPath(product);
+  const productSlug = getProductSlug(product);
+
+  if (categoryPath.mainSlug === PARTS_AND_TONERS_SLUG && categoryPath.brandSlug && categoryPath.typeSlug) {
+    return `/products/${PARTS_AND_TONERS_SLUG}/${categoryPath.brandSlug}/${categoryPath.typeSlug}/${productSlug}`;
+  }
+
+  return `/products/${productSlug}`;
 }
 
 export function getMainCategoryBySlug(slug?: string | null) {
-  if (slug === "parts-and-toner") {
+  if (slug === "parts-and-toner" || slug === PARTS_AND_TONERS_SLUG) {
     return PRODUCT_MAIN_CATEGORIES.find((category) => category.slug === "consumables") ?? null;
   }
   return PRODUCT_MAIN_CATEGORIES.find((category) => category.slug === slug) ?? null;
@@ -130,6 +162,8 @@ export function getConsumablesSlugs(brandSlug?: string | null, typeSlug?: string
 
   return [
     "consumables",
+    "parts-and-toner",
+    PARTS_AND_TONERS_SLUG,
     ...LEGACY_CONSUMABLE_TYPE_CATEGORIES.map((category) => category.slug),
     ...leafSlugs,
   ];
@@ -142,14 +176,14 @@ export function getProductCategoryPath(slug?: string | null) {
     return { mainSlug: "photocopiers", brandSlug: "", typeSlug: "" };
   }
 
-  if (slug === "consumables" || slug === "parts-and-toner") {
-    return { mainSlug: "consumables", brandSlug: "", typeSlug: "" };
+  if (slug === "consumables" || slug === "parts-and-toner" || slug === PARTS_AND_TONERS_SLUG) {
+    return { mainSlug: PARTS_AND_TONERS_SLUG, brandSlug: "", typeSlug: "" };
   }
 
   const leafCategory = getPartsLeafCategoryBySlug(slug);
   if (leafCategory) {
     return {
-      mainSlug: "consumables",
+      mainSlug: PARTS_AND_TONERS_SLUG,
       brandSlug: leafCategory.brandSlug,
       typeSlug: leafCategory.typeSlug,
     };
@@ -159,18 +193,126 @@ export function getProductCategoryPath(slug?: string | null) {
   if (!type) return { mainSlug: "", brandSlug: "", typeSlug: "" };
 
   return {
-    mainSlug: "consumables",
+    mainSlug: PARTS_AND_TONERS_SLUG,
     brandSlug: "",
     typeSlug: type.slug,
   };
 }
 
-export function getConsumableProductHref(product: {
-  id: number;
-  name: string;
-  slug?: string | null;
-  category?: { slug?: string | null } | null;
-}) {
+function normalizeSearchText(product: ProductTaxonomyProduct) {
+  return [
+    product.name,
+    product.tags,
+    product.category?.name,
+    product.category?.slug,
+  ]
+    .filter(Boolean)
+    .join(" ")
+    .toLowerCase();
+}
+
+function inferPartsBrandSlug(product: ProductTaxonomyProduct) {
+  const categorySlug = product.category?.slug;
+  const leafCategory = getPartsLeafCategoryBySlug(categorySlug);
+  if (leafCategory) return leafCategory.brandSlug;
+
+  if (categorySlug && getPartsBrandBySlug(categorySlug)) return categorySlug;
+
+  const text = normalizeSearchText(product);
+  if (/\bcanon\b/.test(text)) return "canon";
+  if (/\bricoh\b/.test(text)) return "ricoh";
+
+  return "";
+}
+
+function inferPartsTypeSlug(product: ProductTaxonomyProduct) {
+  const categorySlug = product.category?.slug;
+  const leafCategory = getPartsLeafCategoryBySlug(categorySlug);
+  if (leafCategory) return leafCategory.typeSlug;
+
+  const categoryType = getPartsTypeBySlug(categorySlug);
+  if (categoryType) return categoryType.slug;
+
+  const text = normalizeSearchText(product);
+  if (/\bwaste\s+toner\b|\bwaste\s+bottle\b/.test(text)) return "waste-toner-bottles";
+  if (/\bstaple|staples\b/.test(text)) return "staples";
+  if (/\bdrum\b|\bpcu\b|\bpcdu\b|\bphotoconductor\b|\bdeveloper\s+unit\b/.test(text)) return "drum-units";
+  if (/\btoner\b|\bcartridge\b/.test(text)) return "toner";
+  if (/\bfuser\b|\bfusing\b|\broller\b|\bbelt\b|\bpart\b|\bparts\b|\bunit\b/.test(text)) return "parts";
+
+  return "";
+}
+
+export function getNormalizedProductCategoryPath(product: ProductTaxonomyProduct) {
+  const basePath = getProductCategoryPath(product.category?.slug);
+
+  if (basePath.mainSlug === "photocopiers") {
+    return basePath;
+  }
+
+  const brandSlug = basePath.brandSlug || inferPartsBrandSlug(product);
+  const typeSlug = basePath.typeSlug || inferPartsTypeSlug(product);
+
+  if (brandSlug || typeSlug || basePath.mainSlug === PARTS_AND_TONERS_SLUG) {
+    return {
+      mainSlug: PARTS_AND_TONERS_SLUG,
+      brandSlug,
+      typeSlug,
+    };
+  }
+
+  return basePath;
+}
+
+export function getProductCategoryBreadcrumbs(product: ProductTaxonomyProduct): ProductBreadcrumb[] {
+  const productHref = getProductHref(product);
+  const categoryPath = getNormalizedProductCategoryPath(product);
+  const breadcrumbs: ProductBreadcrumb[] = [
+    { label: "Products", href: "/products" },
+  ];
+
+  if (categoryPath.mainSlug === PARTS_AND_TONERS_SLUG) {
+    breadcrumbs.push({
+      label: "Parts and Toners",
+      href: `/products/${PARTS_AND_TONERS_SLUG}`,
+    });
+
+    const brand = getPartsBrandBySlug(categoryPath.brandSlug);
+    if (brand) {
+      breadcrumbs.push({
+        label: brand.label,
+        href: `/products/${PARTS_AND_TONERS_SLUG}/${brand.slug}`,
+      });
+    }
+
+    const type = getPartsTypeBySlug(categoryPath.typeSlug);
+    if (brand && type) {
+      breadcrumbs.push({
+        label: type.label,
+        href: `/products/${PARTS_AND_TONERS_SLUG}/${brand.slug}/${type.slug}`,
+      });
+    }
+  } else if (categoryPath.mainSlug === "photocopiers") {
+    breadcrumbs.push({
+      label: "Printers",
+      href: "/products?category=photocopiers",
+    });
+  } else if (product.category?.name) {
+    breadcrumbs.push({
+      label: product.category.name,
+      href: product.category.slug ? `/products?category=${product.category.slug}` : "/products",
+    });
+  }
+
+  breadcrumbs.push({
+    label: product.name,
+    href: productHref,
+  });
+
+  return breadcrumbs;
+}
+
+export function getConsumableProductHref(product: ProductTaxonomyProduct) {
   return getProductHref(product);
 }
 

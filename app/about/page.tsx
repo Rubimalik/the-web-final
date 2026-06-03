@@ -89,7 +89,7 @@ export default function AboutPage() {
               We supply and service equipment from leading manufacturers including:
             </p>
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4 text-center">
-              {["Canon", "Xerox", "Ricoh", "Konica Minolta", "Toshiba"].map((brand) => (
+              {["Canon", "Xerox", "Ricoh", "Toshiba"].map((brand) => (
                 <div key={brand} className="py-2 px-3 rounded-lg bg-cyan-50/40 border border-black/10">
                   <p className="font-semibold text-sm">{brand}</p>
                 </div>

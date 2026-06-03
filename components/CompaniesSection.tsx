@@ -45,7 +45,6 @@ export default function UKSalesSection() {
                     <ul className="list-disc list-inside text-white/70 space-y-2 mb-6">
                         <li>Canon</li>
                         <li>Ricoh</li>
-                        <li>Konica Minolta</li>
                         <li>And other leading manufacturers</li>
                     </ul>
 
@@ -128,7 +127,6 @@ export default function UKSalesSection() {
                         <li>Canon</li>
                         <li>Xerox</li>
                         <li>Ricoh</li>
-                        <li>Konica Minolta</li>
                         <li>Toshiba</li>
                         <li>And many more</li>
                     </ul>
@@ -359,7 +357,7 @@ export default function UKSalesSection() {
                     </p>
 
                     <p className="text-white/70 leading-relaxed mb-6">
-                        Ricoh, Canon, Konica Minolta, Xerox, Toshiba, Sharp, Kyocera, Utax, and Develop.
+                        Ricoh, Canon, Xerox, Toshiba, Sharp, Kyocera, Utax, and Develop.
                     </p>
 
                     <p className="text-white/70 leading-relaxed mb-10">

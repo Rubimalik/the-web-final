@@ -56,7 +56,7 @@ export const metadata: Metadata = {
     template: "%s | BuySupply",
   },
   description:
-    "BuySupply specialises in high-quality photocopiers, printers and consumables. UK-wide collection, fast delivery and competitive prices. Sell or buy copiers from Canon, Ricoh, Konica Minolta, Xerox and more.",
+    "BuySupply specialises in high-quality photocopiers, printers and consumables. UK-wide collection, fast delivery and competitive prices. Sell or buy copiers from Canon, Ricoh, Xerox and more.",
   keywords: [
     "photocopiers UK",
     "buy photocopier UK",
@@ -68,7 +68,6 @@ export const metadata: Metadata = {
     "photocopier dealer UK",
     "Canon copier",
     "Ricoh copier",
-    "Konica Minolta",
     "Xerox printer",
     "lease return copiers",
     "export photocopiers",
@@ -108,7 +107,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "BuySupply | Photocopiers & Printer Consumables UK",
     description:
-      "Buy or sell photocopiers and printer consumables across the UK. Canon, Ricoh, Konica Minolta, Xerox and more.",
+      "Buy or sell photocopiers and printer consumables across the UK. Canon, Ricoh, Xerox and more.",
     images: ["/logo.png"],
   },
  

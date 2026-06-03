@@ -8,6 +8,7 @@ import {
   getPartsBrandBySlug,
   getPartsLeafCategory,
   getPartsTypeBySlug,
+  isKonicaMinoltaProduct,
   slugifyProductName,
 } from "@/lib/product-taxonomy";
 
@@ -149,6 +150,7 @@ export interface ProductListFilters {
   consumableBrand?: string;
   consumableType?: string;
   allowedVisibilities?: ProductVisibility[];
+  excludeKonicaMinolta?: boolean;
 }
 
 export interface CreateProductInput {
@@ -388,11 +390,34 @@ function buildProductWhereClause(
     conditions.push(buildVisibilityCondition(`p."visibility"`, filters.allowedVisibilities, params));
   }
 
+  if (filters.excludeKonicaMinolta) {
+    conditions.push(buildKonicaMinoltaExclusionCondition(params));
+  }
+
   if (conditions.length === 0) {
     return "";
   }
 
   return `WHERE ${conditions.join(" AND ")}`;
+}
+
+function buildKonicaMinoltaExclusionCondition(params: unknown[]) {
+  const fields = [
+    `p."name"`,
+    `p."description"`,
+    `p."tags"`,
+    `c."name"`,
+    `c."slug"`,
+  ];
+  const keywords = ["konica", "minolta", "bizhub"];
+
+  return keywords
+    .map((keyword) => {
+      params.push(`%${keyword}%`);
+      const index = params.length;
+      return fields.map((field) => `COALESCE(${field}, '') NOT ILIKE $${index}`).join(" AND ");
+    })
+    .join(" AND ");
 }
 
 function buildConsumableKeywordConditions(
@@ -572,56 +597,72 @@ async function insertProductImages(
 
 export async function getProductById(
   productId: number,
-  options: { allowedVisibilities?: ProductVisibility[] } = {},
+  options: { allowedVisibilities?: ProductVisibility[]; excludeKonicaMinolta?: boolean } = {},
 ) {
   const product = await getProductByIdWithExecutor(productId, pool, options);
+  if (product && options.excludeKonicaMinolta && isKonicaMinoltaProduct(product)) {
+    return null;
+  }
   return (await withCanonicalProductSlugs(product ? [product] : []))[0] ?? null;
 }
 
 export async function getProductBySlug(
   productSlug: string,
-  options: { allowedVisibilities?: ProductVisibility[]; status?: string } = {},
+  options: { allowedVisibilities?: ProductVisibility[]; status?: string; excludeKonicaMinolta?: boolean } = {},
 ) {
-  const params: unknown[] = [];
-  const where: string[] = [];
-
-  if (options.status) {
-    params.push(options.status);
-    where.push(`"status" = $${params.length}`);
-  }
-
-  if (options.allowedVisibilities && options.allowedVisibilities.length > 0) {
-    where.push(buildVisibilityCondition(`"visibility"`, options.allowedVisibilities, params));
-  }
-
-  const result = await query<{ id: number; name: string }>(
-    `
-      SELECT "id", "name"
-      FROM "Product"
-      ${where.length > 0 ? `WHERE ${where.join(" AND ")}` : ""}
-      ORDER BY "createdAt" DESC, "id" DESC
-    `,
-    params,
-  );
-
-  const canonicalSlugs = await getCanonicalProductSlugMap();
-  const productsWithSlugs = result.rows.map((product) => ({
-    ...product,
-    slug: canonicalSlugs.get(product.id) ?? slugifyProductName(product.name),
-  }));
+  const pageSize = 200;
+  let page = 1;
+  let totalPages = 1;
   const slugWithIdMatch = productSlug.match(/^(.*)-(\d+)$/);
-  const match =
-    productsWithSlugs.find((product) => product.slug === productSlug) ??
-    (slugWithIdMatch
-      ? productsWithSlugs.find((product) => {
-          const [, baseSlug, productId] = slugWithIdMatch;
-          return product.id === Number.parseInt(productId, 10) && slugifyProductName(product.name) === baseSlug;
-        })
-      : undefined);
-  if (!match) return null;
 
-  const product = await getProductByIdWithExecutor(match.id, pool, options);
-  return (await withCanonicalProductSlugs(product ? [product] : []))[0] ?? null;
+  do {
+    const result = await listProducts({
+      page,
+      limit: pageSize,
+      status: options.status,
+      allowedVisibilities: options.allowedVisibilities,
+      excludeKonicaMinolta: options.excludeKonicaMinolta,
+    });
+    const exactMatch = result.data.find((product) => product.slug === productSlug);
+
+    if (exactMatch) {
+      return exactMatch;
+    }
+
+    if (slugWithIdMatch) {
+      const [, baseSlug, productId] = slugWithIdMatch;
+      const id = Number.parseInt(productId, 10);
+      const idMatch = result.data.find(
+        (product) => product.id === id && slugifyProductName(product.name) === baseSlug,
+      );
+
+      if (idMatch) {
+        return idMatch;
+      }
+    }
+
+    totalPages = Math.ceil(result.total / pageSize);
+    page += 1;
+  } while (page <= totalPages);
+
+  if (slugWithIdMatch) {
+    const [, baseSlug, productId] = slugWithIdMatch;
+    const id = Number.parseInt(productId, 10);
+    const product = await getProductById(id, {
+      allowedVisibilities: options.allowedVisibilities,
+    });
+
+    if (
+      product &&
+      (!options.status || product.status === options.status) &&
+      (!options.excludeKonicaMinolta || !isKonicaMinoltaProduct(product)) &&
+      slugifyProductName(product.name) === baseSlug
+    ) {
+      return product;
+    }
+  }
+
+  return null;
 }
 
 function assignCanonicalProductSlugs<T extends { id: number; name: string }>(products: T[]) {

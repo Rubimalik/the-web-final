@@ -74,7 +74,10 @@ export async function GET(
     const productId = Number.parseInt(id, 10);
     const productOptions = isAdmin
       ? {}
-      : { allowedVisibilities: ["public", "both"] satisfies ProductVisibility[] };
+      : {
+          allowedVisibilities: ["public", "both"] satisfies ProductVisibility[],
+          excludeKonicaMinolta: true,
+        };
 
     const product = Number.isNaN(productId)
       ? await getProductBySlug(id, isAdmin ? {} : { ...productOptions, status: "active" })

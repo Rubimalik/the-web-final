@@ -21,10 +21,7 @@ import { getProductImagePlaceholderUrl } from "@/lib/product-image-placeholder";
 import { safeReadJsonResponse } from "@/lib/safe-json";
 import { useCart } from "@/components/CartProvider";
 import {
-  getPartsBrandBySlug,
-  getPartsLeafCategoryBySlug,
-  getPartsTypeBySlug,
-  getProductCategoryPath,
+  getProductCategoryBreadcrumbs,
 } from "@/lib/product-taxonomy";
 
 interface ProductImage {
@@ -89,7 +86,6 @@ function RichText({ text }: { text: string }) {
 
 export default function ProductDetailPage({
   productId,
-  breadcrumbContext,
 }: {
   productId?: string;
   breadcrumbContext?: { brandSlug: string; typeSlug: string };
@@ -164,18 +160,7 @@ export default function ProductDetailPage({
 
   const images = product.images.length > 0 ? product.images : [PLACEHOLDER_IMAGE];
   const currentImg = images[activeImg];
-  const categoryPath = getProductCategoryPath(product.category?.slug);
-  const leafCategory = getPartsLeafCategoryBySlug(product.category?.slug);
-  const breadcrumbBrand =
-    leafCategory ??
-    (breadcrumbContext
-      ? {
-          brandLabel: getPartsBrandBySlug(breadcrumbContext.brandSlug)?.label ?? breadcrumbContext.brandSlug,
-          brandSlug: breadcrumbContext.brandSlug,
-          typeLabel: getPartsTypeBySlug(breadcrumbContext.typeSlug)?.label ?? breadcrumbContext.typeSlug,
-          typeSlug: breadcrumbContext.typeSlug,
-        }
-      : null);
+  const breadcrumbs = getProductCategoryBreadcrumbs(product);
 
   function showPreviousImage() {
     setActiveImg((current) => (current - 1 + images.length) % images.length);
@@ -205,30 +190,24 @@ export default function ProductDetailPage({
 
       <main className="bg-white">
         <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6 lg:py-12">
-          <nav className="mb-8 flex flex-wrap items-center gap-2 text-sm text-black/55">
-            <Link href="/products" className="hover:text-[var(--brand-cyan)]">Products</Link>
-            <span>/</span>
-            {categoryPath.mainSlug === "consumables" ? (
-              <>
-                <Link href="/consumables" className="hover:text-[var(--brand-cyan)]">Consumables</Link>
-                {breadcrumbBrand ? (
-                  <>
-                    <span>/</span>
-                    <Link href={`/consumables/${breadcrumbBrand.brandSlug}`} className="hover:text-[var(--brand-cyan)]">
-                      {breadcrumbBrand.brandLabel}
+          <nav className="mb-8 flex min-w-0 flex-wrap items-center gap-2 text-sm text-black/55">
+            {breadcrumbs.map((crumb, index) => {
+              const isLast = index === breadcrumbs.length - 1;
+              return (
+                <span key={`${crumb.href}-${index}`} className="flex min-w-0 items-center gap-2">
+                  {index > 0 ? <span className="shrink-0">/</span> : null}
+                  {isLast ? (
+                    <span className="min-w-0 max-w-full truncate text-black/80 sm:max-w-[34rem]">
+                      {crumb.label}
+                    </span>
+                  ) : (
+                    <Link href={crumb.href} className="shrink-0 hover:text-[var(--brand-cyan)]">
+                      {crumb.label}
                     </Link>
-                    <span>/</span>
-                    <Link href={`/consumables/${breadcrumbBrand.brandSlug}/${breadcrumbBrand.typeSlug}`} className="hover:text-[var(--brand-cyan)]">
-                      {breadcrumbBrand.typeLabel}
-                    </Link>
-                  </>
-                ) : null}
-              </>
-            ) : (
-              <Link href="/products?category=photocopiers" className="hover:text-[var(--brand-cyan)]">Printers</Link>
-            )}
-            <span>/</span>
-            <span className="text-black/80">{product.name}</span>
+                  )}
+                </span>
+              );
+            })}
           </nav>
           <section className="grid grid-cols-1 gap-8 lg:grid-cols-[minmax(0,1.08fr)_minmax(380px,0.92fr)] lg:gap-10">
             <div className="space-y-4">

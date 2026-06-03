@@ -15,7 +15,6 @@ export default function ConsumableProductSlugRoute() {
       render={(productId) => (
         <ProductDetailClient
           productId={productId}
-          breadcrumbContext={{ brandSlug: params.brand, typeSlug: params.type }}
         />
       )}
     />

@@ -18,7 +18,6 @@ export default function DealerUKSalesPage() {
       <ul className="list-disc list-inside space-y-2">
         <li>Canon</li>
         <li>Ricoh</li>
-        <li>Konica Minolta</li>
         <li>Other leading manufacturers</li>
         <br/>
         <li>Thoroughly cleaned and tested by our in-house engineers</li>
@@ -38,4 +37,3 @@ export default function DealerUKSalesPage() {
     </DealerSectionPageLayout>
   );
 }
-
