@@ -9,6 +9,7 @@ export async function safeReadJsonResponse<T = JsonRecord>(
   response: Response,
   context: string
 ): Promise<T | null> {
+  const contentType = response.headers.get("content-type") ?? "";
   let raw = "";
   try {
     raw = await response.text();
@@ -17,13 +18,17 @@ export async function safeReadJsonResponse<T = JsonRecord>(
     return null;
   }
 
-  console.debug(`[${context}] Response body`, {
-    status: response.status,
-    ok: response.ok,
-    raw: previewRawBody(raw),
-  });
-
   if (!raw.trim()) {
+    return null;
+  }
+
+  if (!contentType.toLowerCase().includes("application/json")) {
+    console.error(`[${context}] Expected JSON response`, {
+      status: response.status,
+      ok: response.ok,
+      contentType,
+      raw: previewRawBody(raw),
+    });
     return null;
   }
 
@@ -59,4 +64,26 @@ export async function safeReadRequestJson<T = JsonRecord>(
     console.error(`[${context}] Invalid JSON request body`, error, { raw });
     return null;
   }
+}
+
+export function readJsonArrayField<T>(
+  payload: unknown,
+  fieldNames: string[] = ["data", "products"],
+) {
+  if (Array.isArray(payload)) {
+    return payload as T[];
+  }
+
+  if (!payload || typeof payload !== "object") {
+    return [];
+  }
+
+  const record = payload as Record<string, unknown>;
+  for (const fieldName of fieldNames) {
+    if (Array.isArray(record[fieldName])) {
+      return record[fieldName] as T[];
+    }
+  }
+
+  return [];
 }

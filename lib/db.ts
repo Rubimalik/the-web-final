@@ -34,18 +34,34 @@ const globalForDb = globalThis as typeof globalThis & {
   __buysupplyPool?: Pool;
 };
 
-export const pool =
-  globalForDb.__buysupplyPool ?? new Pool(resolvePoolConfig());
+function getPool() {
+  if (!globalForDb.__buysupplyPool) {
+    globalForDb.__buysupplyPool = new Pool(resolvePoolConfig());
+  }
 
-if (process.env.NODE_ENV !== "production") {
-  globalForDb.__buysupplyPool = pool;
+  return globalForDb.__buysupplyPool;
 }
+
+export const pool = {
+  query<T extends QueryResultRow = QueryResultRow>(
+    text: string,
+    params: unknown[] = [],
+  ) {
+    return getPool().query<T>(text, params);
+  },
+  connect() {
+    return getPool().connect();
+  },
+  end() {
+    return getPool().end();
+  },
+} as Pick<Pool, "query" | "connect" | "end">;
 
 export async function query<T extends QueryResultRow = QueryResultRow>(
   text: string,
   params: unknown[] = [],
 ) {
-  return runWithTransientRetry(() => pool.query<T>(text, params));
+  return runWithTransientRetry(() => getPool().query<T>(text, params));
 }
 
 function isTransientDbError(error: unknown) {
@@ -87,7 +103,7 @@ async function runWithTransientRetry<T>(operation: () => Promise<T>) {
 export async function withTransaction<T>(
   callback: (client: PoolClient) => Promise<T>,
 ) {
-  const client = await pool.connect();
+  const client = await getPool().connect();
 
   try {
     await client.query("BEGIN");

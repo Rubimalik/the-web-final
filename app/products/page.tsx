@@ -9,7 +9,7 @@ import SiteFooter from "@/components/SiteFooter";
 import FeaturedProductsSection from "@/components/FeaturedProductsSection";
 import { useCart } from "@/components/CartProvider";
 import { getProductImagePlaceholderUrl } from "@/lib/product-image-placeholder";
-import { safeReadJsonResponse } from "@/lib/safe-json";
+import { readJsonArrayField, safeReadJsonResponse } from "@/lib/safe-json";
 import { CATEGORY_IMAGES } from "@/lib/category-images";
 import {
   CONSUMABLE_MAIN_GROUPS,
@@ -19,13 +19,14 @@ import {
   getMainCategoryBySlug,
   getConsumableGroupBySlug,
   getConsumableTypeSlugsForGroup,
+  getProductHref,
   getPartsTypeBySlug,
 } from "@/lib/product-taxonomy";
 
 interface ProductImage { id: number; url: string; isPrimary: boolean; }
 interface Category { id: number; name: string; slug: string; }
 interface Product {
-  id: number; name: string; description: string | null;
+  id: number; slug?: string | null; name: string; description: string | null;
   price: number | null; tags: string | null; status: string;
   createdAt: string; images: ProductImage[];
   category: Category | null;
@@ -58,7 +59,7 @@ function ProductCard({
 
   return (
     <article className="group h-full rounded-2xl overflow-hidden bg-white border border-black/10 hover:border-[var(--brand-cyan)]/45 shadow-sm hover:shadow-[0_12px_32px_rgba(0,0,0,0.08)] transition-all duration-300 flex flex-col">
-      <Link href={`/products/${product.id}`} className="block">
+      <Link href={getProductHref(product)} className="block">
         <div className="relative aspect-[4/3] overflow-hidden rounded-t-2xl bg-cyan-50/40">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
@@ -71,7 +72,7 @@ function ProductCard({
         </div>
       </Link>
       <div className="p-4 flex flex-col gap-3 flex-1">
-        <Link href={`/products/${product.id}`} className="hover:text-[var(--brand-cyan)] transition-colors">
+        <Link href={getProductHref(product)} className="hover:text-[var(--brand-cyan)] transition-colors">
           <p className="text-[15px] text-black font-semibold line-clamp-2 leading-snug min-h-[40px]">
             {product.name}
           </p>
@@ -217,6 +218,7 @@ function ProductsInner() {
     setError("");
     try {
       const params = new URLSearchParams({
+        public: "1",
         status: "active",
         page: String(page),
         limit: "12",
@@ -231,10 +233,11 @@ function ProductsInner() {
       const data = await safeReadJsonResponse<{
         error?: string;
         data?: Product[];
+        products?: Product[];
         pagination?: { totalPages?: number };
       }>(res, "ProductsPage fetch products");
       if (!res.ok) throw new Error(data?.error || "Failed to load");
-      setProducts(data?.data || []);
+      setProducts(readJsonArrayField<Product>(data));
       setTotalPages(data?.pagination?.totalPages || 1);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to fetch");
@@ -256,17 +259,18 @@ function ProductsInner() {
         previewTypes.map(async (typeSlug) => {
           try {
             const params = new URLSearchParams({
+              public: "1",
               status: "active",
               page: "1",
               limit: "1",
               consumableGroup: typeSlug,
             });
             const response = await fetch(`/api/product?${params.toString()}`);
-            const payload = await safeReadJsonResponse<{ data?: Product[] }>(
+            const payload = await safeReadJsonResponse<unknown>(
               response,
               "ProductsPage category previews",
             );
-            return [typeSlug, payload?.data?.[0]] as const;
+            return [typeSlug, readJsonArrayField<Product>(payload)[0]] as const;
           } catch {
             return [typeSlug, undefined] as const;
           }

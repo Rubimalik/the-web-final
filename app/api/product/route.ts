@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { deleteProductImages } from "@/lib/supabase-storage";
 import { createProduct, listProducts, filterPublicProduct } from "@/lib/catalog-store";
+import type { ProductListFilters } from "@/lib/catalog-store";
 import { safeReadRequestJson } from "@/lib/safe-json";
 import { z } from "zod";
 import { getAuthenticatedProfile } from "@/lib/auth/getAuthenticatedProfile";
@@ -41,10 +42,12 @@ export async function GET(req: NextRequest) {
     const categoryId = categoryIdParam ? Number.parseInt(categoryIdParam, 10) : undefined;
     const forcePublicView = searchParams.get("public") === "1";
     const featuredOnly = searchParams.get("featured") === "1";
-    const auth = await getAuthenticatedProfile({ sessionKind: "admin" });
-    const isAdmin = !forcePublicView && isApprovedAdmin(auth);
+    const auth = forcePublicView
+      ? null
+      : await getAuthenticatedProfile({ sessionKind: "admin" });
+    const isAdmin = auth ? isApprovedAdmin(auth) : false;
 
-    const { data: products, total } = await listProducts({
+    const productFilters: ProductListFilters = {
       page,
       limit,
       status: isAdmin ? requestedStatus : "active",
@@ -57,10 +60,24 @@ export async function GET(req: NextRequest) {
       consumableBrand,
       consumableType,
       allowedVisibilities: isAdmin ? undefined : ["public", "both"],
-    });
+    };
+
+    let { data: products, total } = await listProducts(productFilters);
+
+    if (featuredOnly && products.length === 0) {
+      const fallbackResult = await listProducts({
+        ...productFilters,
+        isFeatured: undefined,
+      });
+      products = fallbackResult.data;
+      total = fallbackResult.total;
+    }
+
+    const responseProducts = isAdmin ? products : products.map(filterPublicProduct);
 
     return NextResponse.json({
-      data: isAdmin ? products : products.map(filterPublicProduct),
+      data: responseProducts,
+      products: responseProducts,
       pagination: { page, limit, total, totalPages: Math.ceil(total / limit) },
     });
   } catch (err) {

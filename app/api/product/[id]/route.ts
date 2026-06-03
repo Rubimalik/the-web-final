@@ -1,10 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
-import { deleteProduct, getProductById, updateProduct, filterPublicProduct } from "@/lib/catalog-store";
+import {
+  deleteProduct,
+  filterPublicProduct,
+  getProductById,
+  getProductBySlug,
+  updateProduct,
+} from "@/lib/catalog-store";
 import { deleteProductImages } from "@/lib/supabase-storage";
 import { safeReadRequestJson } from "@/lib/safe-json";
 import { z } from "zod";
 import { getAuthenticatedProfile } from "@/lib/auth/getAuthenticatedProfile";
 import { isApprovedAdmin } from "@/lib/admin-auth";
+import type { ProductVisibility } from "@/lib/catalog-store";
 
 const productImageSchema = z.object({
   url: z.string().url(),
@@ -59,18 +66,19 @@ export async function GET(
 ) {
   try {
     const { id } = await params;
-    const productId = Number.parseInt(id, 10);
-    if (isNaN(productId))
-      return NextResponse.json({ error: "Invalid ID" }, { status: 400 });
-
     const forcePublicView = new URL(req.url).searchParams.get("public") === "1";
-    const auth = await getAuthenticatedProfile({ sessionKind: "admin" });
-    const isAdmin = !forcePublicView && isApprovedAdmin(auth);
+    const auth = forcePublicView
+      ? null
+      : await getAuthenticatedProfile({ sessionKind: "admin" });
+    const isAdmin = auth ? isApprovedAdmin(auth) : false;
+    const productId = Number.parseInt(id, 10);
+    const productOptions = isAdmin
+      ? {}
+      : { allowedVisibilities: ["public", "both"] satisfies ProductVisibility[] };
 
-    const product = await getProductById(
-      productId,
-      isAdmin ? {} : { allowedVisibilities: ["public", "both"] },
-    );
+    const product = Number.isNaN(productId)
+      ? await getProductBySlug(id, isAdmin ? {} : { ...productOptions, status: "active" })
+      : await getProductById(productId, productOptions);
 
     if (!product || (!isAdmin && product.status !== "active"))
       return NextResponse.json({ error: "Product not found" }, { status: 404 });

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { listProducts } from "@/lib/catalog-store";
+import type { ProductListFilters } from "@/lib/catalog-store";
 import { hasDealerAccess } from "@/lib/dealer-session";
 
 export async function GET(req: NextRequest) {
@@ -21,7 +22,7 @@ export async function GET(req: NextRequest) {
     const categoryId = categoryIdParam ? Number.parseInt(categoryIdParam, 10) : undefined;
     const featuredOnly = searchParams.get("featured") === "1";
 
-    const { data: products, total } = await listProducts({
+    const productFilters: ProductListFilters = {
       page,
       limit,
       status: "active",
@@ -34,7 +35,18 @@ export async function GET(req: NextRequest) {
       consumableBrand,
       consumableType,
       allowedVisibilities: ["dealer", "both"],
-    });
+    };
+
+    let { data: products, total } = await listProducts(productFilters);
+
+    if (featuredOnly && products.length === 0) {
+      const fallbackResult = await listProducts({
+        ...productFilters,
+        isFeatured: undefined,
+      });
+      products = fallbackResult.data;
+      total = fallbackResult.total;
+    }
 
     return NextResponse.json({
       data: products,

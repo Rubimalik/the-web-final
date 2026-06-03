@@ -17,6 +17,7 @@ export interface ProductCardCategory {
 
 export interface ProductCardProduct {
   id: number;
+  slug?: string | null;
   name: string;
   description?: string | null;
   price: number | null;

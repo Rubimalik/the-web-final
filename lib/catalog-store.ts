@@ -8,12 +8,14 @@ import {
   getPartsBrandBySlug,
   getPartsLeafCategory,
   getPartsTypeBySlug,
+  slugifyProductName,
 } from "@/lib/product-taxonomy";
 
 type DbExecutor = Pick<Pool, "query"> | PoolClient;
 
 export type ProductStatus = "draft" | "active" | "archived";
 export type ProductVisibility = "public" | "dealer" | "both";
+type StoredProductVisibility = ProductVisibility | "public_and_dealer";
 
 export interface CategorySummary {
   id: number;
@@ -41,6 +43,7 @@ export interface ProductImageRecord {
 
 export interface ProductRecord {
   id: number;
+  slug: string;
   name: string;
   description: string | null;
   url: string | null;
@@ -62,6 +65,7 @@ export interface ProductRecord {
 // Public-safe product type (excludes dealer fields)
 export interface PublicProductRecord {
   id: number;
+  slug: string;
   name: string;
   description: string | null;
   url: string | null;
@@ -80,6 +84,7 @@ export interface PublicProductRecord {
 export function filterPublicProduct(product: ProductRecord): PublicProductRecord {
   return {
     id: product.id,
+    slug: product.slug,
     name: product.name,
     description: product.description,
     url: product.url,
@@ -193,7 +198,7 @@ interface ProductRow {
   price: number | null;
   dealerPrice: number | null;
   dealerNotes: string | null;
-  visibility: ProductVisibility;
+  visibility: StoredProductVisibility | null;
   status: string;
   isFeatured: boolean;
   featuredOrder: number | null;
@@ -209,6 +214,28 @@ function normalizeProductVisibility(value: unknown): ProductVisibility {
   if (value === "dealer") return "dealer";
   if (value === "both" || value === "public_and_dealer") return "both";
   return "public";
+}
+
+function buildVisibilityCondition(
+  column: string,
+  values: ProductVisibility[],
+  params: unknown[],
+) {
+  const expanded = new Set<StoredProductVisibility>(values);
+
+  if (expanded.has("both")) {
+    expanded.add("public_and_dealer");
+  }
+
+  params.push(Array.from(expanded));
+  const index = params.length;
+  const clauses = [`${column} = ANY($${index})`];
+
+  if (expanded.has("public")) {
+    clauses.push(`${column} IS NULL`);
+  }
+
+  return `(${clauses.join(" OR ")})`;
 }
 
 function normalizeImages<T extends { isPrimary?: boolean | null }>(
@@ -232,6 +259,7 @@ function normalizeImages<T extends { isPrimary?: boolean | null }>(
 function mapProductRow(row: ProductRow): ProductRecord {
   return {
     id: row.id,
+    slug: slugifyProductName(row.name),
     name: row.name,
     description: row.description,
     url: row.url,
@@ -357,8 +385,7 @@ function buildProductWhereClause(
   }
 
   if (filters.allowedVisibilities && filters.allowedVisibilities.length > 0) {
-    params.push(filters.allowedVisibilities);
-    conditions.push(`p."visibility" = ANY($${params.length})`);
+    conditions.push(buildVisibilityCondition(`p."visibility"`, filters.allowedVisibilities, params));
   }
 
   if (conditions.length === 0) {
@@ -455,8 +482,7 @@ async function getProductByIdWithExecutor(
   const where: string[] = [`p."id" = $1`];
 
   if (options.allowedVisibilities && options.allowedVisibilities.length > 0) {
-    params.push(options.allowedVisibilities);
-    where.push(`p."visibility" = ANY($${params.length})`);
+    where.push(buildVisibilityCondition(`p."visibility"`, options.allowedVisibilities, params));
   }
 
   const result = await executor.query<ProductRow>(
@@ -548,7 +574,97 @@ export async function getProductById(
   productId: number,
   options: { allowedVisibilities?: ProductVisibility[] } = {},
 ) {
-  return getProductByIdWithExecutor(productId, pool, options);
+  const product = await getProductByIdWithExecutor(productId, pool, options);
+  return (await withCanonicalProductSlugs(product ? [product] : []))[0] ?? null;
+}
+
+export async function getProductBySlug(
+  productSlug: string,
+  options: { allowedVisibilities?: ProductVisibility[]; status?: string } = {},
+) {
+  const params: unknown[] = [];
+  const where: string[] = [];
+
+  if (options.status) {
+    params.push(options.status);
+    where.push(`"status" = $${params.length}`);
+  }
+
+  if (options.allowedVisibilities && options.allowedVisibilities.length > 0) {
+    where.push(buildVisibilityCondition(`"visibility"`, options.allowedVisibilities, params));
+  }
+
+  const result = await query<{ id: number; name: string }>(
+    `
+      SELECT "id", "name"
+      FROM "Product"
+      ${where.length > 0 ? `WHERE ${where.join(" AND ")}` : ""}
+      ORDER BY "createdAt" DESC, "id" DESC
+    `,
+    params,
+  );
+
+  const canonicalSlugs = await getCanonicalProductSlugMap();
+  const productsWithSlugs = result.rows.map((product) => ({
+    ...product,
+    slug: canonicalSlugs.get(product.id) ?? slugifyProductName(product.name),
+  }));
+  const slugWithIdMatch = productSlug.match(/^(.*)-(\d+)$/);
+  const match =
+    productsWithSlugs.find((product) => product.slug === productSlug) ??
+    (slugWithIdMatch
+      ? productsWithSlugs.find((product) => {
+          const [, baseSlug, productId] = slugWithIdMatch;
+          return product.id === Number.parseInt(productId, 10) && slugifyProductName(product.name) === baseSlug;
+        })
+      : undefined);
+  if (!match) return null;
+
+  const product = await getProductByIdWithExecutor(match.id, pool, options);
+  return (await withCanonicalProductSlugs(product ? [product] : []))[0] ?? null;
+}
+
+function assignCanonicalProductSlugs<T extends { id: number; name: string }>(products: T[]) {
+  const slugCounts = new Map<string, number>();
+
+  for (const product of products) {
+    const baseSlug = slugifyProductName(product.name);
+    slugCounts.set(baseSlug, (slugCounts.get(baseSlug) ?? 0) + 1);
+  }
+
+  return products.map((product) => {
+    const baseSlug = slugifyProductName(product.name);
+    return {
+      ...product,
+      slug: (slugCounts.get(baseSlug) ?? 0) > 1 ? `${baseSlug}-${product.id}` : baseSlug,
+    };
+  });
+}
+
+async function withCanonicalProductSlugs<T extends ProductRecord>(
+  products: T[],
+) {
+  if (products.length === 0) return products;
+
+  const canonicalSlugs = await getCanonicalProductSlugMap();
+
+  return products.map((product) => ({
+    ...product,
+    slug: canonicalSlugs.get(product.id) ?? slugifyProductName(product.name),
+  }));
+}
+
+async function getCanonicalProductSlugMap() {
+  const result = await query<{ id: number; name: string }>(
+    `
+      SELECT "id", "name"
+      FROM "Product"
+    `,
+  );
+
+  return new Map(
+    assignCanonicalProductSlugs(result.rows).map((product) => [product.id, product.slug]),
+  );
 }
 
 export async function listProducts(filters: ProductListFilters): Promise<ProductListResult> {
@@ -627,8 +743,10 @@ export async function listProducts(filters: ProductListFilters): Promise<Product
     ),
   ]);
 
+  const data = dataRows.map(mapProductRow);
+
   return {
-    data: dataRows.map(mapProductRow),
+    data: await withCanonicalProductSlugs(data),
     total: countRows[0]?.total ?? 0,
   };
 }
@@ -1173,5 +1291,3 @@ export async function updateProductImageStorageLink(
     [payload.key, payload.url, imageId],
   );
 }
-
-

@@ -24,6 +24,7 @@ interface ProductImage { id: number; url: string; isPrimary: boolean; }
 interface Category { id: number; name: string; slug: string; }
 interface Product {
   id: number;
+  slug?: string | null;
   name: string;
   description: string | null;
   price: number | null;

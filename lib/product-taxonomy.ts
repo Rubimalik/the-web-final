@@ -52,13 +52,26 @@ export const PRODUCT_CATEGORY_SEEDS = [
 ] as const;
 
 export function slugifyProductName(value: string) {
-  return value
+  const slug = value
     .toLowerCase()
     .normalize("NFKD")
     .replace(/[\u0300-\u036f]/g, "")
     .replace(/&/g, " and ")
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-+|-+$/g, "");
+
+  return slug || "product";
+}
+
+export function getProductSlug(product: { id?: number; name: string; slug?: string | null }) {
+  if (product.slug) return product.slug;
+
+  const baseSlug = slugifyProductName(product.name);
+  return typeof product.id === "number" ? `${baseSlug}-${product.id}` : baseSlug;
+}
+
+export function getProductHref(product: { id?: number; name: string; slug?: string | null }) {
+  return `/products/${getProductSlug(product)}`;
 }
 
 export function getMainCategoryBySlug(slug?: string | null) {
@@ -155,13 +168,10 @@ export function getProductCategoryPath(slug?: string | null) {
 export function getConsumableProductHref(product: {
   id: number;
   name: string;
+  slug?: string | null;
   category?: { slug?: string | null } | null;
 }) {
-  const path = getProductCategoryPath(product.category?.slug);
-  if (path.mainSlug === "consumables" && path.brandSlug && path.typeSlug) {
-    return `/consumables/${path.brandSlug}/${path.typeSlug}/${slugifyProductName(product.name)}`;
-  }
-  return `/products/${product.id}`;
+  return getProductHref(product);
 }
 
 export const CONSUMABLE_CATEGORY_SLUGS = getConsumablesSlugs();

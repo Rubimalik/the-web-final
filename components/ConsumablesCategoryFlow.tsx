@@ -11,7 +11,7 @@ import FeaturedProductsSection from "@/components/FeaturedProductsSection";
 import ProductCard from "@/components/ProductCard";
 import { useCart } from "@/components/CartProvider";
 import { getProductImagePlaceholderUrl } from "@/lib/product-image-placeholder";
-import { safeReadJsonResponse } from "@/lib/safe-json";
+import { readJsonArrayField, safeReadJsonResponse } from "@/lib/safe-json";
 import { CATEGORY_IMAGES } from "@/lib/category-images";
 import {
   CONSUMABLE_CATEGORY_SLUGS,
@@ -19,6 +19,7 @@ import {
   PARTS_AND_TONER_TYPES,
   getPartsBrandBySlug,
   getPartsTypeBySlug,
+  getProductHref,
   slugifyProductName,
 } from "@/lib/product-taxonomy";
 
@@ -26,6 +27,7 @@ interface ProductImage { id: number; url: string; isPrimary: boolean; }
 interface Category { id: number; name: string; slug: string; }
 interface Product {
   id: number;
+  slug?: string | null;
   name: string;
   description: string | null;
   price: number | null;
@@ -143,11 +145,11 @@ export function ConsumablesLandingPage() {
               consumableBrand: brand.slug,
             });
             const response = await fetch(`/api/product?${params.toString()}`);
-            const payload = await safeReadJsonResponse<{ data?: Product[] }>(
+            const payload = await safeReadJsonResponse<unknown>(
               response,
               "ConsumablesLandingPage previews",
             );
-            return [brand.slug, payload?.data?.[0]] as const;
+            return [brand.slug, readJsonArrayField<Product>(payload)[0]] as const;
           } catch {
             return [brand.slug, undefined] as const;
           }
@@ -243,11 +245,11 @@ export function ConsumablesBrandPage({ brandSlug }: { brandSlug: string }) {
               consumableType: type.slug,
             });
             const response = await fetch(`/api/product?${params.toString()}`);
-            const payload = await safeReadJsonResponse<{ data?: Product[] }>(
+            const payload = await safeReadJsonResponse<unknown>(
               response,
               "ConsumablesBrandPage previews",
             );
-            return [type.slug, payload?.data?.[0]] as const;
+            return [type.slug, readJsonArrayField<Product>(payload)[0]] as const;
           } catch {
             return [type.slug, undefined] as const;
           }
@@ -372,12 +374,12 @@ export function ConsumablesProductsPage({
       });
       if (search) params.set("search", search);
       const response = await fetch(`/api/product?${params.toString()}`);
-      const payload = await safeReadJsonResponse<{ data?: Product[]; error?: string }>(
+      const payload = await safeReadJsonResponse<{ data?: Product[]; products?: Product[]; error?: string }>(
         response,
         "ConsumablesProductsPage products",
       );
       if (!response.ok) throw new Error(payload?.error || "Failed to load products");
-      setProducts(payload?.data ?? []);
+      setProducts(readJsonArrayField<Product>(payload));
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load products");
       setProducts([]);
@@ -447,7 +449,7 @@ export function ConsumablesProductsPage({
                 <ProductCard
                   key={product.id}
                   product={product}
-                  href={`/consumables/${brand.slug}/${type.slug}/${slugifyProductName(product.name)}`}
+                  href={getProductHref(product)}
                   onAddToCart={() => handleAddToCart(product, imageUrl)}
                   onBuyNow={() => handleBuyNow(product, imageUrl)}
                 />
@@ -511,12 +513,17 @@ export function ConsumableSlugResolver({
           consumableType: currentType.slug,
         });
         const response = await fetch(`/api/product?${params.toString()}`);
-        const payload = await safeReadJsonResponse<{ data?: Product[]; error?: string }>(
+        const payload = await safeReadJsonResponse<{ data?: Product[]; products?: Product[]; error?: string }>(
           response,
           "ConsumableSlugResolver product",
         );
         if (!response.ok) throw new Error(payload?.error || "Failed to load product");
-        const match = (payload?.data ?? []).find((product) => slugifyProductName(product.name) === productSlug);
+        const match = readJsonArrayField<Product>(payload).find((product) => {
+          if (product.slug === productSlug) return true;
+          if (slugifyProductName(product.name) === productSlug) return true;
+
+          return `${slugifyProductName(product.name)}-${product.id}` === productSlug;
+        });
         if (!cancelled) {
           setProductId(match ? String(match.id) : null);
           setError(match ? "" : "Product not found");

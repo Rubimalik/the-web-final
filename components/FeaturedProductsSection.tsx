@@ -25,6 +25,31 @@ function mergeProducts(
   return merged;
 }
 
+function getProductsFromPayload(payload: unknown) {
+  if (Array.isArray(payload)) {
+    return payload as ProductCardProduct[];
+  }
+
+  if (!payload || typeof payload !== "object") {
+    return [];
+  }
+
+  const productPayload = payload as {
+    data?: unknown;
+    products?: unknown;
+  };
+
+  if (Array.isArray(productPayload.data)) {
+    return productPayload.data as ProductCardProduct[];
+  }
+
+  if (Array.isArray(productPayload.products)) {
+    return productPayload.products as ProductCardProduct[];
+  }
+
+  return [];
+}
+
 export default function FeaturedProductsSection({
   title = "Featured Products",
   kicker = "Recommended",
@@ -64,20 +89,21 @@ export default function FeaturedProductsSection({
     async function loadProducts() {
       setIsLoading(true);
       try {
-        const requests: Promise<Response>[] = [];
+        const urls: string[] = [];
         if (categorySlugs && categorySlugs.length > 0) {
-          requests.push(fetch(`/api/product?public=1&featured=1&status=active&slugs=${encodeURIComponent(categorySlugs.join(","))}&page=1&limit=${limit + 1}`));
+          urls.push(`/api/product?public=1&featured=1&status=active&slugs=${encodeURIComponent(categorySlugs.join(","))}&page=1&limit=${limit + 1}`);
         } else if (categorySlug) {
-          requests.push(fetch(`/api/product?public=1&featured=1&status=active&slug=${encodeURIComponent(categorySlug)}&page=1&limit=${limit + 1}`));
+          urls.push(`/api/product?public=1&featured=1&status=active&slug=${encodeURIComponent(categorySlug)}&page=1&limit=${limit + 1}`);
         }
         if ((!categorySlug && (!categorySlugs || categorySlugs.length === 0)) || allowGlobalFallback) {
-          requests.push(fetch(`/api/product?public=1&featured=1&status=active&page=1&limit=${limit + 4}`));
+          urls.push(`/api/product?public=1&featured=1&status=active&page=1&limit=${limit + 4}`);
         }
 
+        const requests = urls.map((url) => fetch(url));
         const responses = await Promise.all(requests);
         const payloads = await Promise.all(
           responses.map((response) =>
-            safeReadJsonResponse<{ data?: ProductCardProduct[] }>(
+            safeReadJsonResponse<unknown>(
               response,
               "FeaturedProductsSection fetch",
             ),
@@ -86,14 +112,39 @@ export default function FeaturedProductsSection({
 
         if (cancelled) return;
         const hasCategoryFilter = Boolean(categorySlug || (categorySlugs && categorySlugs.length > 0));
-        const preferred = hasCategoryFilter ? payloads[0]?.data ?? [] : [];
+        const preferred = hasCategoryFilter ? getProductsFromPayload(payloads[0]) : [];
         const fallback = hasCategoryFilter
           ? allowGlobalFallback
-            ? payloads[1]?.data ?? []
+            ? getProductsFromPayload(payloads[1])
             : []
-          : payloads[0]?.data ?? [];
-        setPreferredProducts(Array.isArray(preferred) ? preferred : []);
-        setFallbackProducts(Array.isArray(fallback) ? fallback : []);
+          : getProductsFromPayload(payloads[0]);
+
+        if (preferred.length > 0 || fallback.length > 0) {
+          setPreferredProducts(preferred);
+          setFallbackProducts(fallback);
+          return;
+        }
+
+        const fallbackUrls = urls.map((url) => url.replace("&featured=1", ""));
+        const fallbackResponses = await Promise.all(fallbackUrls.map((url) => fetch(url)));
+        const fallbackPayloads = await Promise.all(
+          fallbackResponses.map((response) =>
+            safeReadJsonResponse<unknown>(
+              response,
+              "FeaturedProductsSection fallback fetch",
+            ),
+          ),
+        );
+
+        if (cancelled) return;
+        setPreferredProducts(hasCategoryFilter ? getProductsFromPayload(fallbackPayloads[0]) : []);
+        setFallbackProducts(
+          hasCategoryFilter
+            ? allowGlobalFallback
+              ? getProductsFromPayload(fallbackPayloads[1])
+              : []
+            : getProductsFromPayload(fallbackPayloads[0]),
+        );
       } catch {
         if (!cancelled) {
           setPreferredProducts([]);

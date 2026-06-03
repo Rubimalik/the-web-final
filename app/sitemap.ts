@@ -1,10 +1,12 @@
 import { MetadataRoute } from "next";
 import { safeReadJsonResponse } from "@/lib/safe-json";
+import { getProductHref } from "@/lib/product-taxonomy";
 
 const BASE_URL = "https://buysupply.me";
 
 type SitemapProduct = {
   id: number;
+  name: string;
   createdAt: string;
   updatedAt?: string | null;
 };
@@ -21,7 +23,7 @@ const locationPages = [
 
 async function getAllProducts() {
   try {
-    const res = await fetch(`${BASE_URL}/api/product?status=active&limit=1000&page=1`, {
+    const res = await fetch(`${BASE_URL}/api/product?public=1&status=active&limit=1000&page=1`, {
       next: { revalidate: 3600 }, // re-fetch every hour
     });
     const data = await safeReadJsonResponse<{ data?: SitemapProduct[]; error?: string }>(
@@ -95,7 +97,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
   // Dynamic product pages
   const productPages: MetadataRoute.Sitemap = products.map((product) => ({
-    url: `${BASE_URL}/products/${product.id}`,
+    url: `${BASE_URL}${getProductHref(product)}`,
     lastModified: new Date(product.updatedAt ?? product.createdAt),
     changeFrequency: "weekly" as const,
     priority: 0.7,

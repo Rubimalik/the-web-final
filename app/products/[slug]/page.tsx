@@ -1,56 +1,41 @@
 import { Metadata } from "next";
+import { redirect } from "next/navigation";
 import ProductDetailPage from "@/components/ProductDetailClient";
+import {
+  filterPublicProduct,
+  getProductById,
+  getProductBySlug,
+  type PublicProductRecord,
+} from "@/lib/catalog-store";
 import { getProductImagePlaceholderUrl } from "@/lib/product-image-placeholder";
-import { safeReadJsonResponse } from "@/lib/safe-json";
+import { getProductHref } from "@/lib/product-taxonomy";
 
 const BASE_URL = "https://buysupply.me";
 const PRICE_VALID_UNTIL = "2026-12-31";
 
-interface ProductImage {
-  url: string;
-  isPrimary: boolean;
+function isNumericProductParam(value: string) {
+  return /^\d+$/.test(value);
 }
 
-interface ProductCategory {
-  name: string;
+async function getPublicProduct(slug: string): Promise<PublicProductRecord | null> {
+  const product = isNumericProductParam(slug)
+    ? await getProductById(Number.parseInt(slug, 10), {
+        allowedVisibilities: ["public", "both"],
+      })
+    : await getProductBySlug(slug, {
+        allowedVisibilities: ["public", "both"],
+        status: "active",
+      });
+
+  if (!product || product.status !== "active") return null;
+  return filterPublicProduct(product);
 }
 
-interface ProductSeoData {
-  id: number;
-  name: string;
-  description: string | null;
-  price: number | null;
-  tags: string | null;
-  images: ProductImage[];
-  category: ProductCategory | null;
-}
-
-// ── Fetch product server-side for metadata ────────────────────────────────
-async function getProduct(id: string) {
-  try {
-    const res = await fetch(`${BASE_URL}/api/product/${id}`, {
-      next: { revalidate: 3600 },
-    });
-    const data = await safeReadJsonResponse<{ data?: ProductSeoData; error?: string }>(
-      res,
-      "Product metadata getProduct"
-    );
-    if (!res.ok) {
-      console.error("[Product metadata getProduct]", data?.error || "Request failed");
-      return null;
-    }
-    return data?.data ?? null;
-  } catch {
-    return null;
-  }
-}
-
-// ── Dynamic metadata per product ─────────────────────────────────────────
 export async function generateMetadata(
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: Promise<{ slug: string }> },
 ): Promise<Metadata> {
-  const { id } = await params;
-  const product = await getProduct(id);
+  const { slug } = await params;
+  const product = await getPublicProduct(slug);
 
   if (!product) {
     return {
@@ -59,7 +44,8 @@ export async function generateMetadata(
     };
   }
 
-  const primaryImg = product.images?.find((i) => i.isPrimary) ?? product.images?.[0];
+  const productHref = getProductHref(product);
+  const primaryImg = product.images?.find((image) => image.isPrimary) ?? product.images?.[0];
   const fallbackImage = getProductImagePlaceholderUrl();
   const price = product.price != null ? `£${Number(product.price).toFixed(2)}` : "POA";
   const shortDesc = product.description
@@ -69,14 +55,14 @@ export async function generateMetadata(
   return {
     title: product.name,
     description: shortDesc,
-    keywords: product.tags?.split(",").map((t: string) => t.trim()) ?? [],
+    keywords: product.tags?.split(",").map((tag) => tag.trim()) ?? [],
     alternates: {
-      canonical: `${BASE_URL}/products/${product.id}`,
+      canonical: `${BASE_URL}${productHref}`,
     },
     openGraph: {
       title: `${product.name} | BuySupply`,
       description: shortDesc,
-      url: `${BASE_URL}/products/${product.id}`,
+      url: `${BASE_URL}${productHref}`,
       siteName: "BuySupply",
       type: "website",
       images: primaryImg
@@ -92,15 +78,15 @@ export async function generateMetadata(
   };
 }
 
-// ── JSON-LD Product Schema ────────────────────────────────────────────────
-function ProductSchema({ product }: { product: ProductSeoData }) {
+function ProductSchema({ product }: { product: PublicProductRecord }) {
+  const productHref = getProductHref(product);
   const schema = {
     "@context": "https://schema.org",
     "@type": "Product",
     name: product.name,
     description: product.description ?? product.name,
     image: product.images?.length
-      ? product.images.map((i) => i.url)
+      ? product.images.map((image) => image.url)
       : [getProductImagePlaceholderUrl()],
     sku: String(product.id),
     brand: {
@@ -109,7 +95,7 @@ function ProductSchema({ product }: { product: ProductSeoData }) {
     },
     offers: {
       "@type": "Offer",
-      url: `${BASE_URL}/products/${product.id}`,
+      url: `${BASE_URL}${productHref}`,
       priceCurrency: "GBP",
       price: product.price ?? 0,
       priceValidUntil: PRICE_VALID_UNTIL,
@@ -133,15 +119,18 @@ function ProductSchema({ product }: { product: ProductSeoData }) {
   );
 }
 
-// ── Page component ────────────────────────────────────────────────────────
-export default async function Page({ params }: { params: Promise<{ id: string }> }) {
-  const { id } = await params;
-  const product = await getProduct(id);
+export default async function Page({ params }: { params: Promise<{ slug: string }> }) {
+  const { slug } = await params;
+  const product = await getPublicProduct(slug);
+
+  if (product && slug !== product.slug) {
+    redirect(getProductHref(product));
+  }
 
   return (
     <>
-      {product && <ProductSchema product={product} />}
-      <ProductDetailPage />
+      {product ? <ProductSchema product={product} /> : null}
+      <ProductDetailPage productId={slug} />
     </>
   );
 }

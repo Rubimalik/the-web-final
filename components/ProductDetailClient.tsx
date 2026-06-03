@@ -41,6 +41,7 @@ interface Category {
 
 interface Product {
   id: number;
+  slug: string;
   name: string;
   description: string | null;
   url: string | null;
@@ -93,8 +94,8 @@ export default function ProductDetailPage({
   productId?: string;
   breadcrumbContext?: { brandSlug: string; typeSlug: string };
 } = {}) {
-  const params = useParams<{ id?: string }>();
-  const id = productId ?? params.id;
+  const params = useParams<{ id?: string; slug?: string }>();
+  const id = productId ?? params.slug ?? params.id;
   const router = useRouter();
   const [product, setProduct] = useState<Product | null>(null);
   const [loading, setLoading] = useState(true);
