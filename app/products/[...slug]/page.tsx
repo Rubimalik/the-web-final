@@ -1,4 +1,5 @@
 import { Metadata } from "next";
+import { cache } from "react";
 import { notFound, redirect } from "next/navigation";
 import ProductDetailPage from "@/components/ProductDetailClient";
 import {
@@ -20,6 +21,8 @@ const BASE_URL = "https://buysupply.me";
 const PRICE_VALID_UNTIL = "2026-12-31";
 
 export const dynamic = "force-dynamic";
+export const dynamicParams = true;
+export const revalidate = 0;
 export const runtime = "nodejs";
 
 function isNumericProductParam(value: string) {
@@ -44,26 +47,21 @@ function getCategoryRedirect(slug: string[]) {
   return "";
 }
 
-async function getPublicProduct(slug: string): Promise<PublicProductRecord | null> {
-  try {
-    const product = isNumericProductParam(slug)
-      ? await getProductById(Number.parseInt(slug, 10), {
-          allowedVisibilities: ["public", "both"],
-          excludeKonicaMinolta: true,
-        })
-      : await getProductBySlug(slug, {
-          allowedVisibilities: ["public", "both"],
-          status: "active",
-          excludeKonicaMinolta: true,
-        });
+const getPublicProduct = cache(async (slug: string): Promise<PublicProductRecord | null> => {
+  const product = isNumericProductParam(slug)
+    ? await getProductById(Number.parseInt(slug, 10), {
+        allowedVisibilities: ["public", "both"],
+        excludeKonicaMinolta: true,
+      })
+    : await getProductBySlug(slug, {
+        allowedVisibilities: ["public", "both"],
+        status: "active",
+        excludeKonicaMinolta: true,
+      });
 
-    if (!product || product.status !== "active" || isKonicaMinoltaProduct(product)) return null;
-    return filterPublicProduct(product);
-  } catch (error) {
-    console.error("[products detail] Failed to load public product", { slug, error });
-    return null;
-  }
-}
+  if (!product || product.status !== "active" || isKonicaMinoltaProduct(product)) return null;
+  return filterPublicProduct(product);
+});
 
 export async function generateMetadata(
   { params }: { params: Promise<{ slug: string[] }> },

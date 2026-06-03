@@ -607,6 +607,92 @@ export async function getProductById(
   return (await withCanonicalProductSlugs(product ? [product] : []))[0] ?? null;
 }
 
+function isProductAllowedByLookupOptions(
+  product: ProductRecord,
+  options: { allowedVisibilities?: ProductVisibility[]; status?: string; excludeKonicaMinolta?: boolean },
+) {
+  if (options.status && product.status !== options.status) return false;
+
+  if (
+    options.allowedVisibilities &&
+    options.allowedVisibilities.length > 0 &&
+    !options.allowedVisibilities.includes(product.visibility)
+  ) {
+    return false;
+  }
+
+  if (options.excludeKonicaMinolta && isKonicaMinoltaProduct(product)) return false;
+
+  return true;
+}
+
+function productMatchesSlug(product: ProductRecord, normalizedSlug: string) {
+  const baseSlug = slugifyProductName(product.name);
+  const candidates = [
+    product.slug,
+    baseSlug,
+    `${baseSlug}-${product.id}`,
+  ];
+
+  return candidates.some((candidate) => normalizeProductSlug(candidate) === normalizedSlug);
+}
+
+async function listProductsForSlugLookup() {
+  const result = await query<ProductRow>(
+    `
+      SELECT
+        p."id",
+        p."name",
+        p."description",
+        p."url",
+        p."price",
+        p."dealerPrice",
+        p."dealerNotes",
+        p."visibility",
+        p."status",
+        p."isFeatured",
+        p."featuredOrder",
+        p."tags",
+        p."categoryId" AS "categoryId",
+        p."createdAt" AS "createdAt",
+        p."updatedAt" AS "updatedAt",
+        CASE
+          WHEN c."id" IS NULL THEN NULL
+          ELSE json_build_object(
+            'id', c."id",
+            'name', c."name",
+            'slug', c."slug"
+          )
+        END AS "category",
+        COALESCE(
+          (
+            SELECT json_agg(
+              json_build_object(
+                'id', pi."id",
+                'productId', pi."productId",
+                'url', pi."url",
+                'key', pi."key",
+                'isPrimary', pi."isPrimary",
+                'order', pi."order",
+                'createdAt', pi."createdAt"
+              )
+              ORDER BY pi."order" ASC, pi."isPrimary" DESC, pi."createdAt" ASC, pi."id" ASC
+            )
+            FROM "ProductImage" pi
+            WHERE pi."productId" = p."id"
+          ),
+          '[]'::json
+        ) AS "images"
+      FROM "Product" p
+      LEFT JOIN "Category" c
+        ON c."id" = p."categoryId"
+      ORDER BY p."createdAt" DESC
+    `,
+  );
+
+  return assignCanonicalProductSlugs(result.rows.map(mapProductRow));
+}
+
 export async function getProductBySlug(
   productSlug: string,
   options: { allowedVisibilities?: ProductVisibility[]; status?: string; excludeKonicaMinolta?: boolean } = {},
@@ -614,71 +700,16 @@ export async function getProductBySlug(
   const normalizedSlug = normalizeProductSlug(productSlug);
   if (!normalizedSlug) return null;
 
-  const pageSize = 200;
-  let page = 1;
-  let totalPages = 1;
-  const slugWithIdMatch = normalizedSlug.match(/^(.*)-(\d+)$/);
+  const products = await listProductsForSlugLookup();
+  const match = products.find(
+    (product) =>
+      productMatchesSlug(product, normalizedSlug) &&
+      isProductAllowedByLookupOptions(product, options),
+  );
 
-  do {
-    const result = await listProducts({
-      page,
-      limit: pageSize,
-      status: options.status,
-      allowedVisibilities: options.allowedVisibilities,
-      excludeKonicaMinolta: options.excludeKonicaMinolta,
-    });
-    const exactMatch = result.data.find((product) => {
-      const canonicalSlug = normalizeProductSlug(product.slug);
-      const generatedSlug = normalizeProductSlug(slugifyProductName(product.name));
-      const generatedIdSlug = normalizeProductSlug(`${slugifyProductName(product.name)}-${product.id}`);
+  if (!match) return null;
 
-      return (
-        canonicalSlug === normalizedSlug ||
-        generatedSlug === normalizedSlug ||
-        generatedIdSlug === normalizedSlug
-      );
-    });
-
-    if (exactMatch) {
-      return exactMatch;
-    }
-
-    if (slugWithIdMatch) {
-      const [, baseSlug, productId] = slugWithIdMatch;
-      const id = Number.parseInt(productId, 10);
-      const idMatch = result.data.find(
-        (product) =>
-          product.id === id &&
-          normalizeProductSlug(slugifyProductName(product.name)) === normalizeProductSlug(baseSlug),
-      );
-
-      if (idMatch) {
-        return idMatch;
-      }
-    }
-
-    totalPages = Math.ceil(result.total / pageSize);
-    page += 1;
-  } while (page <= totalPages);
-
-  if (slugWithIdMatch) {
-    const [, baseSlug, productId] = slugWithIdMatch;
-    const id = Number.parseInt(productId, 10);
-    const product = await getProductById(id, {
-      allowedVisibilities: options.allowedVisibilities,
-    });
-
-    if (
-      product &&
-      (!options.status || product.status === options.status) &&
-      (!options.excludeKonicaMinolta || !isKonicaMinoltaProduct(product)) &&
-      normalizeProductSlug(slugifyProductName(product.name)) === normalizeProductSlug(baseSlug)
-    ) {
-      return product;
-    }
-  }
-
-  return null;
+  return match;
 }
 
 function assignCanonicalProductSlugs<T extends { id: number; name: string }>(products: T[]) {
