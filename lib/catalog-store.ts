@@ -354,7 +354,7 @@ function buildProductWhereClause(
     params.push(legacyConsumableSlugs);
     const legacySlugIndex = params.length;
     const typeKeywordConditions = consumableTypeSlugs.length > 0
-      ? buildConsumableKeywordConditions(consumableTypeSlugs, "p.\"name\"", "p.\"name\"", params)
+      ? buildConsumableKeywordConditions(consumableTypeSlugs, "p.\"name\"", "p.\"tags\"", params)
       : "TRUE";
     const typeExclusionConditions = consumableTypeSlugs.length > 0
       ? buildConsumableTypeExclusionConditions(consumableTypeSlugs, "p.\"name\"", params)
