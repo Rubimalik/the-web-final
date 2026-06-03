@@ -323,12 +323,9 @@ function buildProductWhereClause(
     conditions.push(`c."slug" = ANY($${params.length})`);
   }
 
-  const consumableTypeSlugs = filters.consumableType
-    ? getConsumableTypeSlugsForGroup(filters.consumableType).length > 0
-      ? getConsumableTypeSlugsForGroup(filters.consumableType)
-      : getPartsTypeBySlug(filters.consumableType)
-        ? [filters.consumableType]
-        : []
+  const selectedConsumableType = getPartsTypeBySlug(filters.consumableType);
+  const consumableTypeSlugs = selectedConsumableType
+    ? [selectedConsumableType.slug]
     : filters.consumableGroup
       ? getConsumableTypeSlugsForGroup(filters.consumableGroup)
       : [];
