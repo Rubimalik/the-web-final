@@ -20,7 +20,6 @@ import {
   getPartsBrandBySlug,
   getPartsTypeBySlug,
   getProductHref,
-  slugifyProductName,
 } from "@/lib/product-taxonomy";
 
 interface ProductImage { id: number; url: string; isPrimary: boolean; }
@@ -496,34 +495,19 @@ export function ConsumableSlugResolver({
 
   useEffect(() => {
     if (!brand || !type) return;
-    const currentBrand = brand;
-    const currentType = type;
     let cancelled = false;
 
     async function resolveProduct() {
       setLoading(true);
       setError("");
       try {
-        const params = new URLSearchParams({
-          public: "1",
-          status: "active",
-          page: "1",
-          limit: "100",
-          consumableBrand: currentBrand.slug,
-          consumableType: currentType.slug,
-        });
-        const response = await fetch(`/api/product?${params.toString()}`);
-        const payload = await safeReadJsonResponse<{ data?: Product[]; products?: Product[]; error?: string }>(
+        const response = await fetch(`/api/product/${encodeURIComponent(productSlug)}?public=1`);
+        const payload = await safeReadJsonResponse<{ data?: Product; error?: string }>(
           response,
           "ConsumableSlugResolver product",
         );
         if (!response.ok) throw new Error(payload?.error || "Failed to load product");
-        const match = readJsonArrayField<Product>(payload).find((product) => {
-          if (product.slug === productSlug) return true;
-          if (slugifyProductName(product.name) === productSlug) return true;
-
-          return `${slugifyProductName(product.name)}-${product.id}` === productSlug;
-        });
+        const match = payload?.data;
         if (!cancelled) {
           setProductId(match ? String(match.id) : null);
           setError(match ? "" : "Product not found");

@@ -9,6 +9,7 @@ import {
   getPartsLeafCategory,
   getPartsTypeBySlug,
   isKonicaMinoltaProduct,
+  normalizeProductSlug,
   slugifyProductName,
 } from "@/lib/product-taxonomy";
 
@@ -610,10 +611,13 @@ export async function getProductBySlug(
   productSlug: string,
   options: { allowedVisibilities?: ProductVisibility[]; status?: string; excludeKonicaMinolta?: boolean } = {},
 ) {
+  const normalizedSlug = normalizeProductSlug(productSlug);
+  if (!normalizedSlug) return null;
+
   const pageSize = 200;
   let page = 1;
   let totalPages = 1;
-  const slugWithIdMatch = productSlug.match(/^(.*)-(\d+)$/);
+  const slugWithIdMatch = normalizedSlug.match(/^(.*)-(\d+)$/);
 
   do {
     const result = await listProducts({
@@ -623,7 +627,17 @@ export async function getProductBySlug(
       allowedVisibilities: options.allowedVisibilities,
       excludeKonicaMinolta: options.excludeKonicaMinolta,
     });
-    const exactMatch = result.data.find((product) => product.slug === productSlug);
+    const exactMatch = result.data.find((product) => {
+      const canonicalSlug = normalizeProductSlug(product.slug);
+      const generatedSlug = normalizeProductSlug(slugifyProductName(product.name));
+      const generatedIdSlug = normalizeProductSlug(`${slugifyProductName(product.name)}-${product.id}`);
+
+      return (
+        canonicalSlug === normalizedSlug ||
+        generatedSlug === normalizedSlug ||
+        generatedIdSlug === normalizedSlug
+      );
+    });
 
     if (exactMatch) {
       return exactMatch;
@@ -633,7 +647,9 @@ export async function getProductBySlug(
       const [, baseSlug, productId] = slugWithIdMatch;
       const id = Number.parseInt(productId, 10);
       const idMatch = result.data.find(
-        (product) => product.id === id && slugifyProductName(product.name) === baseSlug,
+        (product) =>
+          product.id === id &&
+          normalizeProductSlug(slugifyProductName(product.name)) === normalizeProductSlug(baseSlug),
       );
 
       if (idMatch) {
@@ -656,7 +672,7 @@ export async function getProductBySlug(
       product &&
       (!options.status || product.status === options.status) &&
       (!options.excludeKonicaMinolta || !isKonicaMinoltaProduct(product)) &&
-      slugifyProductName(product.name) === baseSlug
+      normalizeProductSlug(slugifyProductName(product.name)) === normalizeProductSlug(baseSlug)
     ) {
       return product;
     }

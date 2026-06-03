@@ -27,9 +27,7 @@ function isNumericProductParam(value: string) {
 }
 
 function getProductSlugParam(slug: string[]) {
-  if (slug.length === 1) return slug[0];
-  if (slug.length === 4 && slug[0] === PARTS_AND_TONERS_SLUG) return slug[3];
-  return "";
+  return slug.filter(Boolean).at(-1) ?? "";
 }
 
 function getCategoryRedirect(slug: string[]) {
@@ -181,7 +179,7 @@ export default async function Page({ params }: { params: Promise<{ slug: string[
   return (
     <>
       {product ? <ProductSchema product={product} /> : null}
-      <ProductDetailPage productId={productSlug} />
+      <ProductDetailPage productId={product.slug} initialProduct={product} />
     </>
   );
 }

@@ -23,12 +23,6 @@ export async function safeReadJsonResponse<T = JsonRecord>(
   }
 
   if (!contentType.toLowerCase().includes("application/json")) {
-    console.error(`[${context}] Expected JSON response`, {
-      status: response.status,
-      ok: response.ok,
-      contentType,
-      raw: previewRawBody(raw),
-    });
     return null;
   }
 

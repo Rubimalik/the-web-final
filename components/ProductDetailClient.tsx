@@ -38,15 +38,15 @@ interface Category {
 
 interface Product {
   id: number;
-  slug: string;
+  slug?: string | null;
   name: string;
   description: string | null;
   url: string | null;
   price: number | null;
   tags: string | null;
   status: string;
-  createdAt: string;
-  images: ProductImage[];
+  createdAt: string | Date;
+  images?: ProductImage[] | null;
   category: Category | null;
 }
 
@@ -60,13 +60,26 @@ function formatPrice(value: number | null | undefined) {
   return typeof value === "number" ? `\u00a3${value.toFixed(2)}` : "Price on application";
 }
 
+function normalizeProduct(product: Product): Product {
+  return {
+    ...product,
+    name: product.name || "Product",
+    description: product.description ?? null,
+    url: product.url ?? null,
+    price: typeof product.price === "number" ? product.price : null,
+    tags: product.tags ?? null,
+    images: Array.isArray(product.images) ? product.images : [],
+    category: product.category ?? null,
+  };
+}
+
 function RichText({ text }: { text: string }) {
   const urlRegex = /(https?:\/\/[^\s]+)/g;
   const parts = text.split(urlRegex);
   return (
     <>
       {parts.map((part, index) =>
-        urlRegex.test(part) ? (
+        /^https?:\/\/[^\s]+$/.test(part) ? (
           <a
             key={index}
             href={part}
@@ -86,15 +99,21 @@ function RichText({ text }: { text: string }) {
 
 export default function ProductDetailPage({
   productId,
+  initialProduct,
 }: {
   productId?: string;
+  initialProduct?: Product | null;
   breadcrumbContext?: { brandSlug: string; typeSlug: string };
 } = {}) {
-  const params = useParams<{ id?: string; slug?: string }>();
-  const id = productId ?? params.slug ?? params.id;
+  const params = useParams<{ id?: string | string[]; slug?: string | string[] }>();
+  const routeParam = params.slug ?? params.id;
+  const routeId = Array.isArray(routeParam) ? routeParam.filter(Boolean).at(-1) : routeParam;
+  const id = productId ?? routeId;
   const router = useRouter();
-  const [product, setProduct] = useState<Product | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [product, setProduct] = useState<Product | null>(
+    initialProduct ? normalizeProduct(initialProduct) : null,
+  );
+  const [loading, setLoading] = useState(!initialProduct);
   const [error, setError] = useState("");
   const [activeImg, setActiveImg] = useState(0);
   const [quantity, setQuantity] = useState(1);
@@ -103,10 +122,20 @@ export default function ProductDetailPage({
   const { addToCart } = useCart();
 
   useEffect(() => {
+    if (initialProduct) {
+      setProduct(normalizeProduct(initialProduct));
+      setLoading(false);
+      setError("");
+      setActiveImg(0);
+      return;
+    }
+
     void (async () => {
       try {
+        setLoading(true);
+        setError("");
         if (!id) throw new Error("Product not found");
-        const response = await fetch(`/api/product/${id}?public=1`);
+        const response = await fetch(`/api/product/${encodeURIComponent(id)}?public=1`);
         const data = await safeReadJsonResponse<{ data?: Product; error?: string }>(
           response,
           "ProductDetailClient load product",
@@ -114,18 +143,20 @@ export default function ProductDetailPage({
         if (!response.ok || !data?.data) {
           throw new Error(data?.error || "Product not found");
         }
-        setProduct(data.data);
+        setProduct(normalizeProduct(data.data));
+        setActiveImg(0);
       } catch (err) {
+        setProduct(null);
         setError(err instanceof Error ? err.message : "Failed to load product");
       } finally {
         setLoading(false);
       }
     })();
-  }, [id]);
+  }, [id, initialProduct]);
 
   useEffect(() => {
     if (!lightbox || !product) return;
-    const images = product.images.length > 0 ? product.images : [PLACEHOLDER_IMAGE];
+    const images = product.images && product.images.length > 0 ? product.images : [PLACEHOLDER_IMAGE];
     const handler = (event: KeyboardEvent) => {
       if (event.key === "ArrowRight") setActiveImg((current) => (current + 1) % images.length);
       if (event.key === "ArrowLeft") setActiveImg((current) => (current - 1 + images.length) % images.length);
@@ -158,7 +189,7 @@ export default function ProductDetailPage({
     );
   }
 
-  const images = product.images.length > 0 ? product.images : [PLACEHOLDER_IMAGE];
+  const images = product.images && product.images.length > 0 ? product.images : [PLACEHOLDER_IMAGE];
   const currentImg = images[activeImg];
   const breadcrumbs = getProductCategoryBreadcrumbs(product);
 
