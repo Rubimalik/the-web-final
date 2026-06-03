@@ -177,7 +177,7 @@ export default async function Page({ params }: { params: Promise<{ slug: string[
   return (
     <>
       {product ? <ProductSchema product={product} /> : null}
-      <ProductDetailPage productId={product.slug} initialProduct={product} />
+      <ProductDetailPage productId={String(product.id)} initialProduct={product} />
     </>
   );
 }

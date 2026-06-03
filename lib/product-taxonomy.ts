@@ -112,8 +112,11 @@ export function isKonicaMinoltaProduct(product: ProductTaxonomyProduct) {
 }
 
 export function getProductHref(product: ProductTaxonomyProduct) {
-  const productSlug = getProductSlug(product);
-  return `/products/${productSlug}`;
+  if (typeof product.id === "number" && Number.isFinite(product.id)) {
+    return `/products/${product.id}`;
+  }
+
+  return "/products";
 }
 
 export function getMainCategoryBySlug(slug?: string | null) {
