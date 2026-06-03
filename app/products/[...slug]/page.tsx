@@ -48,19 +48,24 @@ function getCategoryRedirect(slug: string[]) {
 }
 
 const getPublicProduct = cache(async (slug: string): Promise<PublicProductRecord | null> => {
-  const product = isNumericProductParam(slug)
-    ? await getProductById(Number.parseInt(slug, 10), {
-        allowedVisibilities: ["public", "both"],
-        excludeKonicaMinolta: true,
-      })
-    : await getProductBySlug(slug, {
-        allowedVisibilities: ["public", "both"],
-        status: "active",
-        excludeKonicaMinolta: true,
-      });
+  try {
+    const product = isNumericProductParam(slug)
+      ? await getProductById(Number.parseInt(slug, 10), {
+          allowedVisibilities: ["public", "both"],
+          excludeKonicaMinolta: true,
+        })
+      : await getProductBySlug(slug, {
+          allowedVisibilities: ["public", "both"],
+          status: "active",
+          excludeKonicaMinolta: true,
+        });
 
-  if (!product || product.status !== "active" || isKonicaMinoltaProduct(product)) return null;
-  return filterPublicProduct(product);
+    if (!product || product.status !== "active" || isKonicaMinoltaProduct(product)) return null;
+    return filterPublicProduct(product);
+  } catch (error) {
+    console.error("[products page] Failed to load public product", error);
+    return null;
+  }
 });
 
 export async function generateMetadata(
