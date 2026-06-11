@@ -22,6 +22,39 @@ type LocalSeoPageProps = {
 
 const introTimelineIcons = [Building2, UsersRound, BadgeCheck];
 const businessSolutionIcons = [Building2, Printer];
+const defaultIntroVisual = {
+  src: "/images/canon-imagerunner-advance-dx-c3720i-c3725i-c3730i-no-logo.jpeg",
+  alt: "",
+  width: 918,
+  height: 670,
+};
+const modelShowcaseImages = [
+  {
+    src: "/images/canon-imagerunner-advance-dx-c259i-c359i-no-extra-logo.png",
+    alt: "",
+    width: 1402,
+    height: 1122,
+  },
+  defaultIntroVisual,
+  {
+    src: "/images/canon-imagerunner-advance-dx-c5840-c5860-c5870-no-extra-logo.png",
+    alt: "",
+    width: 1411,
+    height: 1115,
+  },
+];
+const sectionVariantOrder = [
+  "models",
+  "business",
+  "specialist",
+  "rental",
+  "benefits",
+  "parts",
+  "coverage",
+  "why",
+  "areas",
+  "export",
+];
 
 function ModelShowcaseGroup({
   group,
@@ -76,6 +109,59 @@ function ModelShowcaseGroup({
   );
 }
 
+function ModelShowcaseList({
+  list,
+  index,
+  sectionHeading,
+}: {
+  list: NonNullable<LocalContentSection["lists"]>[number];
+  index: number;
+  sectionHeading: string;
+}) {
+  const reverseLayout = index % 2 === 1;
+  const image = modelShowcaseImages[index % modelShowcaseImages.length];
+
+  return (
+    <AnimatedCard
+      as="article"
+      delay={Math.min(index * 0.08, 0.2)}
+      className="location-business-card overflow-hidden"
+    >
+      <div className="grid gap-0 lg:grid-cols-[0.88fr_1.12fr] lg:items-stretch">
+        <div
+          className={`flex min-h-[18rem] items-center justify-center bg-[#f7f8fa] p-6 sm:p-8 ${
+            reverseLayout ? "lg:order-2" : ""
+          }`}
+        >
+          <Image
+            src={image.src}
+            alt={image.alt}
+            width={image.width}
+            height={image.height}
+            className="h-auto max-h-[21rem] w-full object-contain"
+            sizes="(min-width: 1024px) 28rem, (min-width: 640px) 70vw, 88vw"
+          />
+        </div>
+        <div className="flex flex-col justify-center p-6 sm:p-8 lg:p-10">
+          <h3 className="text-2xl font-bold leading-tight text-black sm:text-3xl">
+            {list.intro ?? sectionHeading}
+          </h3>
+          <ul className="mt-6 grid gap-3 sm:grid-cols-2">
+            {list.items.map((item) => (
+              <li key={item} className="flex items-start gap-3 text-sm leading-6 text-black/72 sm:text-base">
+                <span className="mt-0.5 inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-[rgba(0,207,255,0.1)]">
+                  <CheckCircle2 className="h-4 w-4 text-[var(--brand-cyan)]" aria-hidden="true" />
+                </span>
+                <span>{item}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      </div>
+    </AnimatedCard>
+  );
+}
+
 function ModelShowcaseSection({ section }: { section: LocalContentSection }) {
   return (
     <SectionWrapper eyebrow={section.eyebrow} title={section.heading} className="bg-[#f7f8fa]">
@@ -92,6 +178,16 @@ function ModelShowcaseSection({ section }: { section: LocalContentSection }) {
           {section.modelGroups?.map((group, index) => (
             <ModelShowcaseGroup key={group.title} group={group} index={index} />
           ))}
+          {!section.modelGroups?.length
+            ? section.lists?.map((list, index) => (
+                <ModelShowcaseList
+                  key={`${section.heading}-${list.intro ?? index}`}
+                  list={list}
+                  index={index}
+                  sectionHeading={section.heading}
+                />
+              ))
+            : null}
         </div>
 
         {section.closingParagraphs?.length ? (
@@ -187,7 +283,7 @@ function BusinessSolutionsSection({ section }: { section: LocalContentSection })
 }
 
 function LocalSection({ section }: { section: LocalContentSection }) {
-  if (section.variant === "models" && section.modelGroups?.length) {
+  if (section.variant === "models") {
     return <ModelShowcaseSection section={section} />;
   }
 
@@ -255,9 +351,9 @@ function LocalSection({ section }: { section: LocalContentSection }) {
 }
 
 function IntroSection({ content }: { content: LocalPageContent }) {
-  const introGridClass = content.introVisual
-    ? "md:grid-cols-[minmax(0,1.05fr)_minmax(20rem,0.95fr)] lg:grid-cols-[minmax(0,1.02fr)_minmax(24rem,0.98fr)]"
-    : "md:grid-cols-[minmax(0,1.34fr)_minmax(15rem,0.72fr)] lg:grid-cols-[minmax(0,1.46fr)_minmax(18rem,0.74fr)]";
+  const introVisual = content.introVisual ?? defaultIntroVisual;
+  const introGridClass =
+    "md:grid-cols-[minmax(0,1.05fr)_minmax(20rem,0.95fr)] lg:grid-cols-[minmax(0,1.02fr)_minmax(24rem,0.98fr)]";
 
   return (
     <SectionWrapper eyebrow="Local overview" title={content.title} className="bg-[#f7f8fa]">
@@ -284,45 +380,20 @@ function IntroSection({ content }: { content: LocalPageContent }) {
             })}
           </div>
 
-          {content.introVisual ? (
-            <AnimatedCard
-              delay={0.16}
-              className="relative mx-auto flex w-full max-w-[30rem] items-center justify-center md:max-w-[34rem] lg:max-w-[38rem]"
-            >
-              <Image
-                src={content.introVisual.src}
-                alt={content.introVisual.alt}
-                width={content.introVisual.width}
-                height={content.introVisual.height}
-                unoptimized
-                className="h-auto w-full object-contain"
-                sizes="(min-width: 1024px) 32rem, (min-width: 768px) 27rem, 92vw"
-              />
-            </AnimatedCard>
-          ) : (
-            <AnimatedCard
-              delay={0.16}
-              className="local-overview-printer relative mx-auto flex min-h-[17rem] w-full max-w-[24rem] items-end justify-center px-4 pb-0 pt-7 sm:min-h-[21rem] md:min-h-[22rem] md:px-2 lg:min-h-[25rem] lg:px-5"
-            >
-              <span className="local-overview-dots absolute left-1 top-[18%] h-32 w-28" aria-hidden="true" />
-              <span className="absolute inset-x-2 bottom-4 top-4 rounded-full bg-[rgba(220,242,255,0.76)]" aria-hidden="true" />
-              <Image
-                src="/images/canon-copier-cutout-balanced.png"
-                alt="Canon imageRUNNER ADVANCE DX copier product"
-                width={980}
-                height={1178}
-                className="relative z-10 h-auto max-h-[19.5rem] w-auto max-w-[94%] object-contain drop-shadow-[0_24px_28px_rgba(8,32,56,0.18)] sm:max-h-[22.5rem] lg:max-h-[24.5rem]"
-              />
-              <span className="absolute bottom-2 left-4 right-4 z-20 rounded-lg border border-black/10 bg-white/95 px-4 py-3 text-left shadow-[0_18px_38px_rgba(8,32,56,0.14)] sm:bottom-4 sm:left-auto sm:right-2 sm:w-[15rem]">
-                <span className="block text-sm font-bold leading-5 text-black">
-                  imageRUNNER Advance DX
-                </span>
-                <span className="mt-1 block text-xs font-semibold leading-5 text-black/60">
-                  C3720i / C3725i / C3730i
-                </span>
-              </span>
-            </AnimatedCard>
-          )}
+          <AnimatedCard
+            delay={0.16}
+            className="relative mx-auto flex w-full max-w-[30rem] items-center justify-center md:max-w-[34rem] lg:max-w-[38rem]"
+          >
+            <Image
+              src={introVisual.src}
+              alt={introVisual.alt}
+              width={introVisual.width}
+              height={introVisual.height}
+              unoptimized
+              className="h-auto w-full object-contain"
+              sizes="(min-width: 1024px) 32rem, (min-width: 768px) 27rem, 92vw"
+            />
+          </AnimatedCard>
         </div>
 
       </AnimatedCard>
@@ -390,12 +461,17 @@ function ContactSection({ content }: { content: LocalPageContent }) {
 }
 
 export default function LocalSeoPage({ content }: LocalSeoPageProps) {
+  const sections = [...content.sections].sort(
+    (first, second) =>
+      sectionVariantOrder.indexOf(first.variant) - sectionVariantOrder.indexOf(second.variant),
+  );
+
   return (
     <main className="local-location-page min-h-screen overflow-x-hidden bg-white text-black font-myriad">
       <NavBar />
       <LocalHero title={content.title} />
       <IntroSection content={content} />
-      {content.sections.map((section) => (
+      {sections.map((section) => (
         <LocalSection key={section.heading} section={section} />
       ))}
       <FaqSection content={content} />

@@ -9,7 +9,6 @@ type SectionWrapperProps = {
 };
 
 export default function SectionWrapper({
-  eyebrow,
   title,
   children,
   className = "",
