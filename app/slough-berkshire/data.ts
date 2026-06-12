@@ -1,7 +1,9 @@
+import { createCanonAdvanceDxModelGroups } from "@/components/local-pages/canonModelGroups";
 import type { LocalPageContent } from "@/components/local-pages/types";
 
 export const sloughBerkshireContent: LocalPageContent = {
   title: "Refurbished Canon Photocopiers & Office Printers in Slough Berkshire",
+  locationName: "Slough Berkshire",
   introParagraphs: [
     "Searching for reliable refurbished Canon photocopiers and office printers in Slough Berkshire? BuySupply Ltd are one of the area’s leading suppliers of refurbished Canon multifunction photocopiers, office printers, toners, inks and parts for businesses throughout Slough, Burnham, Langley, Windsor, Maidenhead and West London.",
     "Located close to Slough Trading Estate, we specialise in supplying high-quality refurbished Canon office photocopiers to warehouses, logistics firms, corporate offices, schools, construction companies and growing businesses across Berkshire.",
@@ -36,6 +38,7 @@ export const sloughBerkshireContent: LocalPageContent = {
           ],
         },
       ],
+      modelGroups: createCanonAdvanceDxModelGroups("Slough"),
       closingParagraphs: [
         "All refurbished Canon machines are thoroughly tested, cleaned and configured before installation.",
       ],

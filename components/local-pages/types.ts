@@ -44,6 +44,7 @@ export type LocalFaq = {
 
 export type LocalPageContent = {
   title: string;
+  locationName?: string;
   introParagraphs: string[];
   introVisual?: {
     src: string;

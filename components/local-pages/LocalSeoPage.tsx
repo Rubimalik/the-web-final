@@ -162,9 +162,11 @@ function ModelShowcaseList({
   );
 }
 
-function ModelShowcaseSection({ section }: { section: LocalContentSection }) {
+export function ModelShowcaseSection({ section }: { section: LocalContentSection }) {
+  const heading = "Canon imageRUNNER ADVANCE DX Office Photocopiers";
+
   return (
-    <SectionWrapper eyebrow={section.eyebrow} title={section.heading} className="bg-[#f7f8fa]">
+    <SectionWrapper eyebrow={section.eyebrow} title={heading} className="bg-[#f7f8fa]">
       <div className="mx-auto max-w-[76rem] space-y-9 lg:space-y-10">
         {section.paragraphs?.length ? (
           <AnimatedCard className="max-w-5xl space-y-4 border-l-2 border-[rgba(8,122,193,0.16)] pl-5 text-base leading-7 text-black/72 sm:pl-7 sm:text-lg sm:leading-8">
@@ -184,7 +186,7 @@ function ModelShowcaseSection({ section }: { section: LocalContentSection }) {
                   key={`${section.heading}-${list.intro ?? index}`}
                   list={list}
                   index={index}
-                  sectionHeading={section.heading}
+                  sectionHeading={heading}
                 />
               ))
             : null}
@@ -282,7 +284,7 @@ function BusinessSolutionsSection({ section }: { section: LocalContentSection })
   );
 }
 
-function LocalSection({ section }: { section: LocalContentSection }) {
+export function LocalSection({ section }: { section: LocalContentSection }) {
   if (section.variant === "models") {
     return <ModelShowcaseSection section={section} />;
   }
@@ -350,13 +352,16 @@ function LocalSection({ section }: { section: LocalContentSection }) {
   );
 }
 
-function IntroSection({ content }: { content: LocalPageContent }) {
+export function IntroSection({ content }: { content: LocalPageContent }) {
   const introVisual = content.introVisual ?? defaultIntroVisual;
+  const heading = content.locationName
+    ? `Refurbished Canon Photocopiers & Canon Office Printers in ${content.locationName}`
+    : content.title;
   const introGridClass =
     "md:grid-cols-[minmax(0,1.05fr)_minmax(20rem,0.95fr)] lg:grid-cols-[minmax(0,1.02fr)_minmax(24rem,0.98fr)]";
 
   return (
-    <SectionWrapper eyebrow="Local overview" title={content.title} className="bg-[#f7f8fa]">
+    <SectionWrapper eyebrow="Local overview" title={heading} className="bg-[#f7f8fa]">
       <AnimatedCard className="local-overview-open p-1 sm:p-2">
         <div className={`grid gap-8 p-1 sm:p-2 md:items-center lg:gap-8 ${introGridClass}`}>
           <div className="space-y-0 text-base leading-7 text-black/76 sm:text-[1.0625rem] sm:leading-8">

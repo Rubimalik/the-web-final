@@ -1,10 +1,8 @@
 import type { Metadata, Viewport } from "next";
 import NavBar from "@/components/Navbar";
 import SiteFooter from "@/components/SiteFooter";
+import { IntroSection, LocalSection } from "@/components/local-pages/LocalSeoPage";
 import WindsorHeroSection from "./components/WindsorHeroSection";
-import WindsorOverviewSection from "./components/WindsorOverviewSection";
-import CanonSpecialistsSection from "./components/CanonSpecialistsSection";
-import PopularCanonModelsSection from "./components/PopularCanonModelsSection";
 import CostSavingSection from "./components/CostSavingSection";
 import RentalSection from "./components/RentalSection";
 import FilmTvMediaSection from "./components/FilmTvMediaSection";
@@ -17,6 +15,7 @@ import WhyChooseSection from "./components/WhyChooseSection";
 import AreasCoveredSection from "./components/AreasCoveredSection";
 import FaqSection from "./components/FaqSection";
 import ContactSection from "./components/ContactSection";
+import { windsorBerkshireLocalContent } from "./data";
 
 export const metadata: Metadata = {
   title: {
@@ -39,9 +38,8 @@ export default function WindsorBerkshirePage() {
     <main className="min-h-screen overflow-x-hidden bg-white text-black font-myriad">
       <NavBar />
       <WindsorHeroSection />
-      <WindsorOverviewSection />
-      <CanonSpecialistsSection />
-      <PopularCanonModelsSection />
+      <IntroSection content={windsorBerkshireLocalContent} />
+      <LocalSection section={windsorBerkshireLocalContent.sections[0]} />
       <CostSavingSection />
       <RentalSection />
       <FilmTvMediaSection />

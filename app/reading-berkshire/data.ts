@@ -1,7 +1,9 @@
+import { createCanonAdvanceDxModelGroups } from "@/components/local-pages/canonModelGroups";
 import type { LocalPageContent } from "@/components/local-pages/types";
 
 export const readingBerkshireContent: LocalPageContent = {
   title: "Canon Office Photocopiers & Refurbished Canon Printers in Reading Berkshire",
+  locationName: "Reading Berkshire",
   introParagraphs: [
     "Businesses across Reading Berkshire looking for reliable Canon office photocopiers and refurbished Canon multifunction printers choose BuySupply Ltd for dependable office printing systems, genuine Canon consumables and professional technical support.",
     "BuySupply Ltd specialise in refurbished Canon imageRUNNER ADVANCE DX photocopiers, Canon A3 office printers and Canon multifunction printing systems for commercial offices, education providers, technology companies and professional businesses throughout Reading and the wider Berkshire region.",
@@ -35,6 +37,7 @@ export const readingBerkshireContent: LocalPageContent = {
           ],
         },
       ],
+      modelGroups: createCanonAdvanceDxModelGroups("Reading"),
       closingParagraphs: [
         "Every Canon office printer and Canon multifunction photocopier is fully refurbished, tested and prepared by experienced technicians before installation.",
       ],

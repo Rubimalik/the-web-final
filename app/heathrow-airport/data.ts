@@ -1,7 +1,9 @@
+import { createCanonAdvanceDxModelGroups } from "@/components/local-pages/canonModelGroups";
 import type { LocalPageContent } from "@/components/local-pages/types";
 
 export const heathrowAirportContent: LocalPageContent = {
   title: "Canon imageRUNNER ADVANCE DX Photocopiers & Office Printers Near Heathrow Airport",
+  locationName: "Heathrow London",
   introParagraphs: [
     "BuySupply Ltd are specialists in refurbished Canon imageRUNNER ADVANCE DX photocopiers, Canon office printers and genuine Canon consumables, supplying businesses throughout Heathrow Airport, West London, Slough and the surrounding commercial areas.",
     "We provide professionally refurbished Canon multifunction photocopiers to offices, freight companies, airport support businesses, logistics operators, warehouses, hotels and commercial organisations requiring reliable high-volume office printing solutions close to Heathrow Airport.",
@@ -33,6 +35,7 @@ export const heathrowAirportContent: LocalPageContent = {
           ],
         },
       ],
+      modelGroups: createCanonAdvanceDxModelGroups("Heathrow"),
       closingParagraphs: [
         "Our refurbished Canon photocopiers are professionally cleaned, tested and configured by experienced manufacturer-trained technicians before delivery and installation.",
       ],

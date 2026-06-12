@@ -1,7 +1,9 @@
+import { createCanonAdvanceDxModelGroups } from "@/components/local-pages/canonModelGroups";
 import type { LocalPageContent } from "@/components/local-pages/types";
 
 export const maidenheadBerkshireContent: LocalPageContent = {
   title: "Refurbished Canon imageRUNNER ADVANCE DX Photocopiers in Maidenhead Berkshire",
+  locationName: "Maidenhead Berkshire",
   introParagraphs: [
     "BuySupply Ltd are Canon photocopier specialists supplying refurbished Canon imageRUNNER ADVANCE DX photocopiers, Canon multifunction printers, Canon office printers and genuine Canon toner cartridges throughout Maidenhead Berkshire and the surrounding areas.",
     "If your business is searching for reliable refurbished Canon photocopiers in Maidenhead, BuySupply provide professionally refurbished Canon office printing systems with delivery, installation, servicing and ongoing support.",
@@ -38,6 +40,7 @@ export const maidenheadBerkshireContent: LocalPageContent = {
           ],
         },
       ],
+      modelGroups: createCanonAdvanceDxModelGroups("Maidenhead"),
       closingParagraphs: [
         "All Canon photocopiers are professionally refurbished, tested and prepared by experienced manufacturer-trained technicians before installation.",
       ],

@@ -1,3 +1,6 @@
+import { createCanonAdvanceDxModelGroups } from "@/components/local-pages/canonModelGroups";
+import type { LocalPageContent } from "@/components/local-pages/types";
+
 export const businessTypes = [
   "Offices",
   "Schools",
@@ -210,3 +213,44 @@ export const faqs = [
       "Yes, we can provide servicing, maintenance and consumable support for many Canon office photocopiers and printers.",
   },
 ];
+
+export const windsorBerkshireLocalContent: LocalPageContent = {
+  title: "Refurbished Canon Photocopiers Windsor Berkshire",
+  locationName: "Windsor Berkshire",
+  introParagraphs: [
+    "Looking for reliable refurbished Canon photocopiers and office printers in Windsor Berkshire? BuySupply Ltd are trusted specialists in refurbished Canon photocopiers, Canon office printers, multifunction printers, genuine Canon toners, inks and parts, supplying businesses throughout Windsor, Slough, Maidenhead, Ascot, Berkshire and West London.",
+    "Established since 2001, BuySupply Ltd provide professionally refurbished Canon photocopiers with delivery, installation, servicing, maintenance and ongoing support. Every Canon copier is fully tested and prepared by manufacturer-trained technicians from our dedicated workshop facility near Slough Trading Estate.",
+    "We help businesses reduce office printing costs by supplying reliable refurbished Canon office equipment at significantly lower prices compared to new machines, without compromising on quality, reliability or performance.",
+    "Whether you are looking to buy, rent, lease, upgrade or maintain a Canon photocopier, BuySupply provide flexible office printing solutions for businesses of all sizes across Windsor Berkshire and surrounding areas.",
+  ],
+  sections: [
+    {
+      eyebrow: "Canon DX",
+      heading: "Canon imageRUNNER ADVANCE DX Office Photocopiers",
+      paragraphs: [
+        "BuySupply specialise in refurbished Canon imageRUNNER ADVANCE DX photocopiers and Canon multifunction office printers, offering businesses a cost-effective alternative to expensive new office printing equipment.",
+      ],
+      lists: [
+        {
+          intro: "Popular refurbished Canon photocopier models we supply include:",
+          items: canonModels,
+        },
+      ],
+      modelGroups: createCanonAdvanceDxModelGroups("Windsor"),
+      closingParagraphs: [
+        "Our refurbished Canon photocopiers are professionally cleaned, configured, tested and quality checked before delivery, helping businesses save up to 70% versus purchasing new Canon equipment.",
+        "All machines are inspected and prepared by experienced engineers before installation.",
+      ],
+      variant: "models",
+    },
+  ],
+  faqs,
+  contact: {
+    heading: "Contact BuySupply Ltd",
+    intro:
+      "For refurbished Canon photocopiers, office printers, rentals, servicing, toners and parts in Windsor Berkshire, contact BuySupply Ltd today.",
+    details: "01753 971125sales@buysupply.me",
+    closing:
+      "BuySupply Ltd supply refurbished Canon photocopiers, Canon office printers, rentals, servicing, toners and parts throughout Windsor Berkshire and surrounding areas.",
+  },
+};

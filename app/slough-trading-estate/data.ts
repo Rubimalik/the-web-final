@@ -1,7 +1,9 @@
+import { createCanonAdvanceDxModelGroups } from "@/components/local-pages/canonModelGroups";
 import type { LocalPageContent } from "@/components/local-pages/types";
 
 export const sloughTradingEstateContent: LocalPageContent = {
   title: "Canon Photocopier Specialists on Slough Trading Estate",
+  locationName: "Slough Trading Estate",
   introParagraphs: [
     "BuySupply Ltd are specialists in refurbished Canon imageRUNNER ADVANCE DX photocopiers and Canon office printing systems based on Slough Trading Estate, supplying businesses throughout Slough Berkshire, Heathrow corridor and West London.",
     "Operating from Slough Trading Estate, we provide refurbished Canon photocopiers, Canon multifunction office printers, genuine Canon toner cartridges and Canon spare parts to warehouses, logistics companies, corporate offices, industrial units and commercial businesses requiring reliable high-performance office printing solutions.",
@@ -34,6 +36,7 @@ export const sloughTradingEstateContent: LocalPageContent = {
           ],
         },
       ],
+      modelGroups: createCanonAdvanceDxModelGroups("Slough Trading Estate"),
       closingParagraphs: [
         "Every Canon office photocopier is professionally refurbished, tested and prepared in our dedicated workshop facility on Slough Trading Estate by experienced manufacturer-trained technicians.",
       ],
