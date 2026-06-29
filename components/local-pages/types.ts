@@ -1,6 +1,7 @@
 export type LocalList = {
   intro?: string;
   items: string[];
+  desktopColumns?: 1 | 2;
 };
 
 export type LocalModelGroup = {

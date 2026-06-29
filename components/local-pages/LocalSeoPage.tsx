@@ -246,7 +246,7 @@ function BusinessSolutionsSection({ section }: { section: LocalContentSection })
                       {list.intro}
                     </h3>
                   ) : null}
-                  <ul className="mt-5 grid gap-3">
+                  <ul className={`mt-5 grid gap-3 ${list.desktopColumns === 2 ? "lg:grid-cols-2" : ""}`}>
                     {list.items.map((item) => (
                       <li
                         key={item}
