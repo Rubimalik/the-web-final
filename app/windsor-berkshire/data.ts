@@ -260,7 +260,7 @@ export const windsorBerkshireLocalContent: LocalPageContent = {
         {
           intro: "We regularly supply refurbished Canon photocopiers and office printers to:",
           items: businessTypes,
-          desktopColumns: 2,
+          desktopColumns: 3,
         },
       ],
       variant: "business",

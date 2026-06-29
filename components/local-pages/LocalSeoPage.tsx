@@ -230,13 +230,16 @@ function BusinessSolutionsSection({ section }: { section: LocalContentSection })
           <div className="mt-10 grid gap-6 lg:grid-cols-2 lg:gap-8">
             {section.lists.map((list, index) => {
               const Icon = businessSolutionIcons[index % businessSolutionIcons.length];
+              const isWideGrid = list.desktopColumns === 3;
 
               return (
                 <AnimatedCard
                   as="article"
                   key={`${section.heading}-${list.intro ?? index}`}
                   delay={Math.min(index * 0.08, 0.18)}
-                  className="location-business-card flex h-full flex-col p-6 sm:p-8"
+                  className={`location-business-card flex h-full flex-col p-6 sm:p-8 ${
+                    isWideGrid ? "lg:col-span-2 lg:p-10" : ""
+                  }`}
                 >
                   <span className="flex h-12 w-12 items-center justify-center rounded-full bg-[rgba(0,207,255,0.12)] text-[#00cfff]">
                     <Icon className="h-6 w-6" aria-hidden="true" />
@@ -246,7 +249,15 @@ function BusinessSolutionsSection({ section }: { section: LocalContentSection })
                       {list.intro}
                     </h3>
                   ) : null}
-                  <ul className={`mt-5 grid gap-3 ${list.desktopColumns === 2 ? "lg:grid-cols-2" : ""}`}>
+                  <ul
+                    className={`mt-5 grid gap-3 ${
+                      isWideGrid
+                        ? "sm:grid-cols-2 lg:grid-cols-3 lg:gap-x-6 lg:gap-y-4"
+                        : list.desktopColumns === 2
+                          ? "lg:grid-cols-2"
+                          : ""
+                    }`}
+                  >
                     {list.items.map((item) => (
                       <li
                         key={item}
